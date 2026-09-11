@@ -1,8 +1,9 @@
 <script lang="ts">
   // Previsualización de imagen en pestaña de solo-lectura (PLAN.md §6.1).
   // Lee los bytes via el comando `read_asset_bytes` (ver src-tauri/src/assets.rs)
-  // y arma un Blob local — evita abrir el protocolo `asset:`/su scope de
-  // filesystem para carpetas de sketch arbitrarias, ver nota en assets.rs.
+  // y arma un data: URI local — evita abrir el protocolo `asset:`/su scope de
+  // filesystem para carpetas de sketch arbitrarias (ver nota en assets.rs), y
+  // evita Blob/createObjectURL (dio problemas de carga/revoke en el webview).
   import { invoke } from "@tauri-apps/api/core";
   import { t } from "$lib/i18n";
 
@@ -24,10 +25,22 @@
     return MIME[ext] ?? "application/octet-stream";
   }
 
+  // ponytail: data: URI en vez de Blob/createObjectURL — mas simple (sin
+  // revoke que gestionar) y la CSP ya permite `data:` sin depender del
+  // soporte de `blob:` del webview. En chunks de 8KB para no reventar el
+  // limite de argumentos de String.fromCharCode con imagenes grandes.
+  function bytesToBase64(bytes: Uint8Array): string {
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+  }
+
   async function load(name: string) {
     error = null;
     dims = null;
-    const previous = url;
     url = null;
     try {
       const bytes = await invoke<number[]>("read_asset_bytes", {
@@ -35,12 +48,11 @@
         kind: "images",
         filename: name,
       });
-      const blob = new Blob([new Uint8Array(bytes)], { type: mimeFor(name) });
-      url = URL.createObjectURL(blob);
+      const base64 = bytesToBase64(new Uint8Array(bytes));
+      url = `data:${mimeFor(name)};base64,${base64}`;
     } catch (e) {
       error = `${t("preview.loadError")}: ${e}`;
     }
-    if (previous) URL.revokeObjectURL(previous);
   }
 
   function handleLoad(e: Event) {
@@ -48,20 +60,14 @@
     dims = { w: img.naturalWidth, h: img.naturalHeight };
   }
 
-  // ponytail: si el navegador bloquea/falla la carga del blob (CSP, archivo
-  // corrupto, etc.) esto evita quedarnos en blanco sin explicar nada.
+  // ponytail: si la imagen no decodifica (archivo corrupto, etc.) esto evita
+  // quedarnos en blanco sin explicar nada.
   function handleImgError() {
     error = `${t("preview.loadError")}: no se pudo mostrar la imagen`;
   }
 
   $effect(() => {
     load(filename);
-  });
-
-  $effect(() => {
-    return () => {
-      if (url) URL.revokeObjectURL(url);
-    };
   });
 </script>
 
