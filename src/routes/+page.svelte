@@ -164,11 +164,25 @@
     listen<string>("run_stderr", (e) => {
       consoleLines = [...consoleLines, { kind: "err", text: e.payload }];
       consoleExpanded = true;
-      // TODO(friendly-errors): interceptar lineas con prefijo ##ARCADEZERO##
-      // (JSON estructurado, ver PLAN.md §3.2) y mostrarlas como tarjeta de
-      // error amigable en vez de texto crudo, cuando exista el evento
-      // `run_error` (falta en el backend hoy, ver src-tauri/src/lib.rs).
     }).then((u) => unlisten.push(u));
+    // TODO(editor-ux): el backend ya emite `run_error` (src-tauri/src/run.rs
+    // + error_parse.rs) para las lineas ##ARCADEZERO## que antes llegaban
+    // como run_stderr crudo. Falta consumirlo aca: tarjeta de error +
+    // "Ir a la linea" (PLAN.md §7). Forma exacta del payload (serde
+    // `StructuredError`, ver src-tauri/src/error_parse.rs):
+    //   {
+    //     type: string;        // ej. "NameError", "SyntaxError", "error" (pygame.error)
+    //     message: string;     // mensaje crudo de Python, nunca se oculta
+    //     file: string | null;
+    //     lineno: number | null;
+    //     friendly_es: string; // texto amigable ya calculado en Rust (catalogo)
+    //     friendly_en: string;
+    //     traceback: string;   // traceback completo, para el detalle plegable
+    //   }
+    // listen<StructuredError>("run_error", (e) => { ... })
+    // Las lineas ##ARCADEZERO## YA NO llegan por run_stderr (run.rs las
+    // intercepta antes de emitir), asi que el TODO anterior de parsear el
+    // prefijo aca quedo obsoleto.
     listen<number | null>("run_exit", () => {
       running = false;
     }).then((u) => unlisten.push(u));

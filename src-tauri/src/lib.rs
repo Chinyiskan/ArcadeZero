@@ -1,4 +1,5 @@
 mod assets;
+mod error_parse;
 mod project;
 mod run;
 mod settings;

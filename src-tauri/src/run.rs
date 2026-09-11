@@ -12,10 +12,7 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
 
-/// El prefijo que usa el excepthook de launcher.py para el JSON de error
-/// (ver PLAN.md §3.2). El parseo real es de `error_parse.rs` (Fase 3,
-/// friendly-errors); por ahora esas lineas viajan igual como run_stderr.
-const ERROR_PREFIX: &str = "##ARCADEZERO##";
+use crate::error_parse::parse_stderr_line;
 
 /// Estado compartido en Tauri: el proceso del juego en ejecucion, si hay uno.
 /// Un solo run a la vez (igual que Mu: un `main.py`, un juego corriendo).
@@ -75,10 +72,17 @@ where
     loop {
         match lines.next_line().await {
             Ok(Some(line)) => {
-                // Las lineas de error estructurado tambien se emiten como
-                // run_stderr por ahora; error_parse.rs las intercepta en Fase 3.
-                let _ = line.starts_with(ERROR_PREFIX);
-                let _ = app.emit(event, line);
+                // Lineas ##ARCADEZERO##{...} del excepthook de launcher.py
+                // (PLAN.md §3.2/§7): se parsean y salen como `run_error`
+                // estructurado en vez de texto crudo, sea stdout o stderr.
+                match parse_stderr_line(&line) {
+                    Some(structured) => {
+                        let _ = app.emit("run_error", structured);
+                    }
+                    None => {
+                        let _ = app.emit(event, line);
+                    }
+                }
             }
             Ok(None) => break,
             Err(_) => break,

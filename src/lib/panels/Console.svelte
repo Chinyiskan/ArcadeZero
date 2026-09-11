@@ -1,9 +1,13 @@
 <script lang="ts">
   // Consola colapsable (PLAN.md §6.1): stdout/stderr en vivo, se expande
-  // sola cuando hay salida. La tarjeta de error amigable (§7) llega con
-  // friendly-errors via el evento `run_error`, que el backend aun no emite
-  // (ver invoke_handler en src-tauri/src/lib.rs) — hoy solo mostramos las
-  // lineas crudas de run_stdout/run_stderr.
+  // sola cuando hay salida. La tarjeta de error amigable (§7) ya tiene su
+  // evento listo en el backend: `run_error` (src-tauri/src/run.rs +
+  // error_parse.rs), con forma { type, message, file, lineno, friendly_es,
+  // friendly_en, traceback } — ver el TODO(editor-ux) en
+  // src/routes/+page.svelte para el detalle. Falta consumirlo y renderizar
+  // la tarjeta aca (o en un componente nuevo); hoy este panel solo muestra
+  // las lineas crudas de run_stdout/run_stderr (que ya no incluyen las
+  // lineas ##ARCADEZERO##, interceptadas antes en Rust).
   import { t } from "$lib/i18n";
   import type { ConsoleLine } from "./types";
   import CaretDownIcon from "phosphor-svelte/lib/CaretDownIcon";
