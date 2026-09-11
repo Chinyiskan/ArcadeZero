@@ -8,7 +8,8 @@
   import StatusBar from "$lib/StatusBar.svelte";
   import Console from "$lib/panels/Console.svelte";
   import AssetsPanel from "$lib/panels/AssetsPanel.svelte";
-  import type { ConsoleLine } from "$lib/panels/types";
+  import ErrorCard from "$lib/panels/ErrorCard.svelte";
+  import type { ConsoleLine, StructuredError } from "$lib/panels/types";
   import { t } from "$lib/i18n";
   import { nextTheme, systemDefaultTheme, type ThemeName } from "$lib/theme";
 
@@ -21,6 +22,7 @@
   let fontSize = $state(16);
   let consoleLines = $state<ConsoleLine[]>([]);
   let consoleExpanded = $state(false);
+  let runError = $state<StructuredError | null>(null);
   let runtimeOk = $state<boolean | null>(null);
   let assetsCollapsed = $state(false);
   let settings = $state<Settings>({ sketches_dir: null, theme: null });
@@ -109,11 +111,16 @@
     if (dirty) await handleSave();
     consoleLines = [];
     consoleExpanded = true;
+    runError = null;
     await invoke("run_project", { path: projectPath });
   }
 
   async function handleStop() {
     await invoke("stop_run");
+  }
+
+  function handleGoToLine(line: number) {
+    editor?.goToLine(line);
   }
 
   function handleZoomIn() {
@@ -165,24 +172,10 @@
       consoleLines = [...consoleLines, { kind: "err", text: e.payload }];
       consoleExpanded = true;
     }).then((u) => unlisten.push(u));
-    // TODO(editor-ux): el backend ya emite `run_error` (src-tauri/src/run.rs
-    // + error_parse.rs) para las lineas ##ARCADEZERO## que antes llegaban
-    // como run_stderr crudo. Falta consumirlo aca: tarjeta de error +
-    // "Ir a la linea" (PLAN.md §7). Forma exacta del payload (serde
-    // `StructuredError`, ver src-tauri/src/error_parse.rs):
-    //   {
-    //     type: string;        // ej. "NameError", "SyntaxError", "error" (pygame.error)
-    //     message: string;     // mensaje crudo de Python, nunca se oculta
-    //     file: string | null;
-    //     lineno: number | null;
-    //     friendly_es: string; // texto amigable ya calculado en Rust (catalogo)
-    //     friendly_en: string;
-    //     traceback: string;   // traceback completo, para el detalle plegable
-    //   }
-    // listen<StructuredError>("run_error", (e) => { ... })
-    // Las lineas ##ARCADEZERO## YA NO llegan por run_stderr (run.rs las
-    // intercepta antes de emitir), asi que el TODO anterior de parsear el
-    // prefijo aca quedo obsoleto.
+    listen<StructuredError>("run_error", (e) => {
+      runError = e.payload;
+      consoleExpanded = true;
+    }).then((u) => unlisten.push(u));
     listen<number | null>("run_exit", () => {
       running = false;
     }).then((u) => unlisten.push(u));
@@ -228,6 +221,9 @@
         <CodeEditor bind:this={editor} bind:value={code} bind:fontSize />
       </div>
     </div>
+    {#if runError}
+      <ErrorCard error={runError} ongotoline={handleGoToLine} />
+    {/if}
     <Console bind:lines={consoleLines} bind:expanded={consoleExpanded} />
     <StatusBar fileName="main.py" saved={!dirty} {runtimeOk} />
   {/if}

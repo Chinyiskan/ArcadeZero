@@ -35,5 +35,9 @@
   "assets.expand": "Mostrar assets",
   "assets.importTitle": "Elige un archivo para importar",
   "assets.importErrorPrefix": "No se pudo importar",
-  "assets.deleteErrorPrefix": "No se pudo borrar"
+  "assets.deleteErrorPrefix": "No se pudo borrar",
+  "error.title": "Encontramos un error",
+  "error.goToLinePrefix": "Ir a la línea",
+  "error.originalLabel": "Mensaje original",
+  "error.detailsSummary": "Ver detalle técnico (traceback)"
 }

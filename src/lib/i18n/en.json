@@ -35,5 +35,9 @@
   "assets.expand": "Show assets",
   "assets.importTitle": "Choose a file to import",
   "assets.importErrorPrefix": "Couldn't import",
-  "assets.deleteErrorPrefix": "Couldn't delete"
+  "assets.deleteErrorPrefix": "Couldn't delete",
+  "error.title": "We found an error",
+  "error.goToLinePrefix": "Go to line",
+  "error.originalLabel": "Original message",
+  "error.detailsSummary": "See technical detail (traceback)"
 }
