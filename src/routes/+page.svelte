@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+  import { open as openDialog } from "@tauri-apps/plugin-dialog";
   import CodeEditor from "$lib/editor/CodeEditor.svelte";
   import Toolbar from "$lib/Toolbar.svelte";
   import StatusBar from "$lib/StatusBar.svelte";
@@ -52,18 +53,30 @@
     savedCode = content;
   }
 
+  // ponytail: selector de carpeta con dialogo nativo (tauri-plugin-dialog);
+  // si la plataforma no lo soporta, cae a prompt de texto como red de
+  // seguridad minima (mismo patron que AssetsPanel.svelte).
+  async function pickDirectory(title: string, defaultPath?: string): Promise<string | null> {
+    try {
+      const picked = await openDialog({ title, directory: true, defaultPath });
+      return typeof picked === "string" ? picked : null;
+    } catch {
+      return window.prompt(title, defaultPath ?? "");
+    }
+  }
+
   async function handleNew() {
-    const suggestion = settings.sketches_dir
-      ? `${settings.sketches_dir}\\mi-juego`
-      : "";
-    const dest = window.prompt(t("prompt.newProjectFolder"), suggestion);
-    if (!dest) return;
+    const parent = await pickDirectory(t("prompt.newProjectParent"), settings.sketches_dir ?? undefined);
+    if (!parent) return;
+    const name = window.prompt(t("prompt.newProjectName"), "mi-juego");
+    if (!name) return;
+    const dest = `${parent}\\${name}`;
     const folder = await invoke<string>("new_project", { template: "en-blanco", dest });
     await openAt(folder);
   }
 
   async function handleOpen() {
-    const dest = window.prompt(t("prompt.openProjectFolder"), projectPath ?? "");
+    const dest = await pickDirectory(t("prompt.openProjectFolder"), projectPath ?? undefined);
     if (!dest) return;
     await openAt(dest);
   }
