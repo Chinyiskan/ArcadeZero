@@ -6,6 +6,10 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use tauri::{AppHandle, State};
+
+use crate::assets::{self, AssetWatcherState};
+
 pub const SKETCH_SUBDIRS: [&str; 3] = ["images", "sounds", "music"];
 
 const BLANK_TEMPLATE: &str = "\
@@ -23,11 +27,45 @@ def update():
     pass
 ";
 
-/// Crea la estructura de un sketch nuevo en `dest`.
+/// Carpeta `templates/` del repo (armada por `pgzero-domain`, Fase 2).
 ///
-/// ponytail: hoy solo existe la plantilla "en-blanco"; el resto del catalogo
-/// (mi-primer-sprite, plataformas-basico) llega en Fase 2 con `templates/`.
-pub fn create_sketch(_template: &str, dest: &Path) -> io::Result<PathBuf> {
+/// Override para tests/dev: env var `ARCADEZERO_TEMPLATES_DIR` (mismo patrón
+/// que `ARCADEZERO_RUNTIME_DIR` en `run.rs`).
+fn templates_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("ARCADEZERO_TEMPLATES_DIR") {
+        return PathBuf::from(dir);
+    }
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("templates")
+}
+
+/// Copia un directorio recursivamente (no hay `fs::copy_dir` en std).
+fn copy_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
+    fs::create_dir_all(dest)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let dest_path = dest.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir_recursive(&entry.path(), &dest_path)?;
+        } else {
+            fs::copy(entry.path(), &dest_path)?;
+        }
+    }
+    Ok(())
+}
+
+/// Crea la estructura de un sketch nuevo en `dest` a partir de `template`
+/// (nombre de una carpeta en `templates/`, p.ej. "en-blanco",
+/// "mi-primer-sprite", "plataformas-basico").
+///
+/// Si la plantilla no existe en disco, cae al `BLANK_TEMPLATE` embebido
+/// (nunca deja al usuario sin `main.py`).
+pub fn create_sketch(template: &str, dest: &Path) -> io::Result<PathBuf> {
+    let template_src = templates_dir().join(template);
+    if template_src.is_dir() {
+        copy_dir_recursive(&template_src, dest)?;
+    }
     fs::create_dir_all(dest)?;
     for sub in SKETCH_SUBDIRS {
         fs::create_dir_all(dest.join(sub))?;
@@ -60,16 +98,31 @@ pub fn validate_sketch(path: &Path) -> Result<PathBuf, String> {
     Ok(main_py.parent().unwrap_or(path).to_path_buf())
 }
 
+/// ponytail: abrir/crear un sketch es también "el sketch activo cambió",
+/// así que aquí mismo se (re)arranca el watcher de assets — reemplaza al
+/// anterior si había uno, sin necesidad de un comando `close_project`
+/// separado (ver `assets::watch_sketch`).
 #[tauri::command]
-pub fn new_project(template: String, dest: String) -> Result<String, String> {
-    create_sketch(&template, Path::new(&dest))
-        .map(|p| p.display().to_string())
-        .map_err(|e| e.to_string())
+pub fn new_project(
+    app: AppHandle,
+    watcher: State<'_, AssetWatcherState>,
+    template: String,
+    dest: String,
+) -> Result<String, String> {
+    let created = create_sketch(&template, Path::new(&dest)).map_err(|e| e.to_string())?;
+    assets::watch_sketch(app, &watcher, &created)?;
+    Ok(created.display().to_string())
 }
 
 #[tauri::command]
-pub fn open_project(path: String) -> Result<String, String> {
-    validate_sketch(Path::new(&path)).map(|p| p.display().to_string())
+pub fn open_project(
+    app: AppHandle,
+    watcher: State<'_, AssetWatcherState>,
+    path: String,
+) -> Result<String, String> {
+    let sketch_dir = validate_sketch(Path::new(&path))?;
+    assets::watch_sketch(app, &watcher, &sketch_dir)?;
+    Ok(sketch_dir.display().to_string())
 }
 
 #[tauri::command]

@@ -1,3 +1,4 @@
+mod assets;
 mod project;
 mod run;
 mod settings;
@@ -21,6 +22,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(run::RunState::default())
+        .manage(assets::AssetWatcherState::default())
         .invoke_handler(tauri::generate_handler![
             project::open_project,
             project::new_project,
@@ -29,6 +31,9 @@ pub fn run() {
             run::run_project,
             run::stop_run,
             run::runtime_status,
+            assets::list_assets,
+            assets::import_asset,
+            assets::delete_asset,
             get_settings,
             set_settings,
         ])
