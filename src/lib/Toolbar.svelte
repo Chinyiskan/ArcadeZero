@@ -1,6 +1,14 @@
 <script lang="ts">
-  // Toolbar real (PLAN.md §6.2): iconos grandes + etiqueta de texto.
+  // Toolbar real (PLAN.md §6.2): iconos Phosphor + etiqueta de texto, cero
+  // emojis. Un icono por boton, tamano consistente (24px).
   import { t } from "$lib/i18n";
+  import FilePlusIcon from "phosphor-svelte/lib/FilePlusIcon";
+  import FolderOpenIcon from "phosphor-svelte/lib/FolderOpenIcon";
+  import FloppyDiskIcon from "phosphor-svelte/lib/FloppyDiskIcon";
+  import PlayIcon from "phosphor-svelte/lib/PlayIcon";
+  import StopIcon from "phosphor-svelte/lib/StopIcon";
+  import MagnifyingGlassPlusIcon from "phosphor-svelte/lib/MagnifyingGlassPlusIcon";
+  import MagnifyingGlassMinusIcon from "phosphor-svelte/lib/MagnifyingGlassMinusIcon";
 
   let {
     running = false,
@@ -21,19 +29,21 @@
     onzoomin?: () => void;
     onzoomout?: () => void;
   } = $props();
+
+  const ICON_SIZE = 24;
 </script>
 
 <div class="toolbar" role="toolbar" aria-label="Barra de herramientas">
   <button class="tbtn" onclick={onnew} title={t("toolbar.new")}>
-    <span class="icon" aria-hidden="true">📄</span>
+    <FilePlusIcon size={ICON_SIZE} aria-hidden="true" />
     <span>{t("toolbar.new")}</span>
   </button>
   <button class="tbtn" onclick={onopen} title={t("toolbar.open")}>
-    <span class="icon" aria-hidden="true">📂</span>
+    <FolderOpenIcon size={ICON_SIZE} aria-hidden="true" />
     <span>{t("toolbar.open")}</span>
   </button>
   <button class="tbtn" onclick={onsave} title={t("toolbar.save")}>
-    <span class="icon" aria-hidden="true">💾</span>
+    <FloppyDiskIcon size={ICON_SIZE} aria-hidden="true" />
     <span>{t("toolbar.save")}</span>
   </button>
 
@@ -45,7 +55,7 @@
     disabled={running}
     title={`${t("toolbar.play")} (F5)`}
   >
-    <span class="icon" aria-hidden="true">▶</span>
+    <PlayIcon size={ICON_SIZE} weight="fill" aria-hidden="true" />
     <span>{t("toolbar.play")}</span>
   </button>
   <button
@@ -54,18 +64,18 @@
     disabled={!running}
     title={`${t("toolbar.stop")} (F6)`}
   >
-    <span class="icon" aria-hidden="true">⏹</span>
+    <StopIcon size={ICON_SIZE} weight="fill" aria-hidden="true" />
     <span>{t("toolbar.stop")}</span>
   </button>
 
   <div class="sep" role="separator"></div>
 
   <button class="tbtn" onclick={onzoomout} title={`${t("toolbar.zoomOut")} (Ctrl -)`}>
-    <span class="icon" aria-hidden="true">🔍−</span>
+    <MagnifyingGlassMinusIcon size={ICON_SIZE} aria-hidden="true" />
     <span>{t("toolbar.zoomOut")}</span>
   </button>
   <button class="tbtn" onclick={onzoomin} title={`${t("toolbar.zoomIn")} (Ctrl +)`}>
-    <span class="icon" aria-hidden="true">🔍+</span>
+    <MagnifyingGlassPlusIcon size={ICON_SIZE} aria-hidden="true" />
     <span>{t("toolbar.zoomIn")}</span>
   </button>
 </div>
@@ -106,10 +116,6 @@
   .tbtn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-  }
-  .icon {
-    font-size: 1.4rem;
-    line-height: 1;
   }
   .primary {
     color: var(--az-color-success);

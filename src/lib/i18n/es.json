@@ -18,5 +18,20 @@
   "onboarding.openExisting": "Abrir un proyecto existente",
   "prompt.newProjectFolder": "¿En que carpeta creamos tu proyecto nuevo?",
   "prompt.openProjectFolder": "¿Que carpeta de proyecto quieres abrir?",
-  "banner.firstRun": "Pulsa ▶ Jugar para ver tu juego. Edita el código y vuelve a jugar."
+  "banner.firstRun": "Pulsa Jugar para ver tu juego. Edita el código y vuelve a jugar.",
+  "assets.title": "Assets",
+  "assets.images": "Imágenes",
+  "assets.sounds": "Sonidos",
+  "assets.music": "Música",
+  "assets.import": "Importar",
+  "assets.empty": "Vacío",
+  "assets.delete": "Borrar",
+  "assets.deleteConfirmPrefix": "¿Borrar",
+  "assets.deleteYes": "Sí, borrar",
+  "assets.deleteNo": "Cancelar",
+  "assets.collapse": "Ocultar assets",
+  "assets.expand": "Mostrar assets",
+  "assets.importTitle": "Elige un archivo para importar",
+  "assets.importErrorPrefix": "No se pudo importar",
+  "assets.deleteErrorPrefix": "No se pudo borrar"
 }

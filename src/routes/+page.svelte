@@ -6,6 +6,7 @@
   import Toolbar from "$lib/Toolbar.svelte";
   import StatusBar from "$lib/StatusBar.svelte";
   import Console from "$lib/panels/Console.svelte";
+  import AssetsPanel from "$lib/panels/AssetsPanel.svelte";
   import type { ConsoleLine } from "$lib/panels/types";
   import { t } from "$lib/i18n";
 
@@ -19,6 +20,7 @@
   let consoleLines = $state<ConsoleLine[]>([]);
   let consoleExpanded = $state(false);
   let runtimeOk = $state<boolean | null>(null);
+  let assetsCollapsed = $state(false);
   let settings = $state<Settings>({ sketches_dir: null, theme: "dia" });
   let editor: CodeEditor | undefined = $state();
 
@@ -174,8 +176,11 @@
     </div>
   {:else}
     <div class="banner">{t("banner.firstRun")}</div>
-    <div class="main">
-      <CodeEditor bind:this={editor} bind:value={code} bind:fontSize />
+    <div class="workspace">
+      <AssetsPanel {projectPath} bind:collapsed={assetsCollapsed} />
+      <div class="main">
+        <CodeEditor bind:this={editor} bind:value={code} bind:fontSize />
+      </div>
     </div>
     <Console bind:lines={consoleLines} bind:expanded={consoleExpanded} />
     <StatusBar fileName="main.py" saved={!dirty} {runtimeOk} />
@@ -188,9 +193,15 @@
     flex-direction: column;
     height: 100vh;
   }
+  .workspace {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
   .main {
     flex: 1;
     min-height: 0;
+    min-width: 0;
   }
   .banner {
     padding: var(--az-space-1) var(--az-space-3);

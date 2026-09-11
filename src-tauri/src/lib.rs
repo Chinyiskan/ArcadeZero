@@ -21,6 +21,7 @@ fn set_settings(app: tauri::AppHandle, patch: settings::Settings) -> Result<(), 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(run::RunState::default())
         .manage(assets::AssetWatcherState::default())
         .invoke_handler(tauri::generate_handler![

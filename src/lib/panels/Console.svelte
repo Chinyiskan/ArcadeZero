@@ -6,6 +6,8 @@
   // lineas crudas de run_stdout/run_stderr.
   import { t } from "$lib/i18n";
   import type { ConsoleLine } from "./types";
+  import CaretDownIcon from "phosphor-svelte/lib/CaretDownIcon";
+  import CaretRightIcon from "phosphor-svelte/lib/CaretRightIcon";
 
   let {
     lines = $bindable([]),
@@ -29,7 +31,11 @@
     onclick={() => (expanded = !expanded)}
     aria-expanded={expanded}
   >
-    <span class="chevron">{expanded ? "▾" : "▸"}</span>
+    {#if expanded}
+      <CaretDownIcon size={16} aria-hidden="true" />
+    {:else}
+      <CaretRightIcon size={16} aria-hidden="true" />
+    {/if}
     {t("console.title")}
     {#if lines.length > 0}<span class="count">{lines.length}</span>{/if}
   </button>

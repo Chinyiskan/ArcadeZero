@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { indentLevel, guideStyle } from "./indentGuides";
 import { checkIndentIssue } from "./indentLint";
+import { STATIC_OPTIONS } from "./completions";
 
 describe("indentLevel", () => {
   it("cuenta niveles de 4 espacios", () => {
@@ -61,5 +62,28 @@ describe("checkIndentIssue", () => {
 
   it("no penaliza tabs puros en v1", () => {
     expect(checkIndentIssue("\tx = 1")).toBeNull();
+  });
+});
+
+describe("STATIC_OPTIONS (autocompletado pgzero)", () => {
+  const labels = STATIC_OPTIONS.map((o) => o.label);
+
+  it("incluye la API de alto nivel del cheatsheet de pgzero", () => {
+    for (const name of ["Actor", "screen", "keyboard", "sounds", "music", "clock", "animate"]) {
+      expect(labels).toContain(name);
+    }
+  });
+
+  it("incluye snippets para los callbacks que pgzero busca por nombre", () => {
+    for (const name of ["def draw", "def update", "def on_key_down"]) {
+      expect(labels).toContain(name);
+    }
+  });
+
+  it("no duplica los symbolos de pgzero agregados", () => {
+    const pgzeroLabels = labels.filter(
+      (l) => !["def", "for", "if", "while", "class"].includes(l),
+    );
+    expect(new Set(pgzeroLabels).size).toBe(pgzeroLabels.length);
   });
 });

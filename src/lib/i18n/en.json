@@ -18,5 +18,20 @@
   "onboarding.openExisting": "Open an existing project",
   "prompt.newProjectFolder": "Which folder should we create your new project in?",
   "prompt.openProjectFolder": "Which project folder do you want to open?",
-  "banner.firstRun": "Press ▶ Play to see your game. Edit the code and play again."
+  "banner.firstRun": "Press Play to see your game. Edit the code and play again.",
+  "assets.title": "Assets",
+  "assets.images": "Images",
+  "assets.sounds": "Sounds",
+  "assets.music": "Music",
+  "assets.import": "Import",
+  "assets.empty": "Empty",
+  "assets.delete": "Delete",
+  "assets.deleteConfirmPrefix": "Delete",
+  "assets.deleteYes": "Yes, delete",
+  "assets.deleteNo": "Cancel",
+  "assets.collapse": "Hide assets",
+  "assets.expand": "Show assets",
+  "assets.importTitle": "Choose a file to import",
+  "assets.importErrorPrefix": "Couldn't import",
+  "assets.deleteErrorPrefix": "Couldn't delete"
 }
