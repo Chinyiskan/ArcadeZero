@@ -25,6 +25,7 @@ pub fn run() {
             project::open_project,
             project::new_project,
             project::save_file,
+            project::read_file,
             run::run_project,
             run::stop_run,
             run::runtime_status,

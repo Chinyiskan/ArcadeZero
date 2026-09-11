@@ -77,6 +77,17 @@ pub fn save_file(path: String, content: String) -> Result<(), String> {
     fs::write(&path, content).map_err(|e| format!("No se pudo guardar {path}: {e}"))
 }
 
+/// Lee el contenido de un archivo de texto (usado para cargar `main.py` en
+/// el editor tras `open_project`/`new_project`).
+///
+/// ponytail: faltaba en el contrato de §3.3 pero es imprescindible para que
+/// "Abrir" muestre algo — sin esto el editor no tiene como leer el
+/// `main.py` en disco. Agregado minimo, simetrico a `save_file`.
+#[tauri::command]
+pub fn read_file(path: String) -> Result<String, String> {
+    fs::read_to_string(&path).map_err(|e| format!("No se pudo leer {path}: {e}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,6 +123,18 @@ mod tests {
 
         let result = validate_sketch(&dest);
         assert!(result.is_err());
+
+        fs::remove_dir_all(&dest).ok();
+    }
+
+    #[test]
+    fn read_file_returns_written_content() {
+        let dest = temp_dir("read_file");
+        create_sketch("en-blanco", &dest).unwrap();
+        let main_py = dest.join("main.py");
+
+        let content = read_file(main_py.display().to_string()).expect("leer main.py");
+        assert!(content.contains("Nuevo juego con pgzero"));
 
         fs::remove_dir_all(&dest).ok();
     }

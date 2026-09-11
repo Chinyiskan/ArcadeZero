@@ -1,156 +1,233 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+  import CodeEditor from "$lib/editor/CodeEditor.svelte";
+  import Toolbar from "$lib/Toolbar.svelte";
+  import StatusBar from "$lib/StatusBar.svelte";
+  import Console from "$lib/panels/Console.svelte";
+  import type { ConsoleLine } from "$lib/panels/types";
+  import { t } from "$lib/i18n";
 
-  let name = $state("");
-  let greetMsg = $state("");
+  type Settings = { sketches_dir: string | null; theme: string };
 
-  async function greet(event: Event) {
-    event.preventDefault();
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    greetMsg = await invoke("greet", { name });
+  let projectPath = $state<string | null>(null);
+  let code = $state("");
+  let savedCode = $state("");
+  let running = $state(false);
+  let fontSize = $state(16);
+  let consoleLines = $state<ConsoleLine[]>([]);
+  let consoleExpanded = $state(false);
+  let runtimeOk = $state<boolean | null>(null);
+  let settings = $state<Settings>({ sketches_dir: null, theme: "dia" });
+  let editor: CodeEditor | undefined = $state();
+
+  const dirty = $derived(code !== savedCode);
+
+  async function loadSettings() {
+    try {
+      settings = await invoke<Settings>("get_settings");
+      document.documentElement.dataset.theme = settings.theme || "dia";
+    } catch (e) {
+      console.error("get_settings fallo", e);
+    }
   }
+
+  async function refreshRuntimeStatus() {
+    try {
+      const status = await invoke<{ pgzero_ok: boolean }>("runtime_status");
+      runtimeOk = status.pgzero_ok;
+    } catch {
+      runtimeOk = false;
+    }
+  }
+
+  async function openAt(path: string) {
+    const folder = await invoke<string>("open_project", { path });
+    const content = await invoke<string>("read_file", { path: `${folder}\\main.py` });
+    projectPath = folder;
+    code = content;
+    savedCode = content;
+  }
+
+  async function handleNew() {
+    const suggestion = settings.sketches_dir
+      ? `${settings.sketches_dir}\\mi-juego`
+      : "";
+    const dest = window.prompt(t("prompt.newProjectFolder"), suggestion);
+    if (!dest) return;
+    const folder = await invoke<string>("new_project", { template: "en-blanco", dest });
+    await openAt(folder);
+  }
+
+  async function handleOpen() {
+    const dest = window.prompt(t("prompt.openProjectFolder"), projectPath ?? "");
+    if (!dest) return;
+    await openAt(dest);
+  }
+
+  async function handleSave() {
+    if (!projectPath) return;
+    await invoke("save_file", { path: `${projectPath}\\main.py`, content: code });
+    savedCode = code;
+  }
+
+  async function handlePlay() {
+    if (!projectPath) return;
+    if (dirty) await handleSave();
+    consoleLines = [];
+    consoleExpanded = true;
+    await invoke("run_project", { path: projectPath });
+  }
+
+  async function handleStop() {
+    await invoke("stop_run");
+  }
+
+  function handleZoomIn() {
+    editor?.zoom(1);
+  }
+  function handleZoomOut() {
+    editor?.zoom(-1);
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key === "s") {
+      e.preventDefault();
+      handleSave();
+    } else if (mod && (e.key === "+" || e.key === "=")) {
+      e.preventDefault();
+      handleZoomIn();
+    } else if (mod && e.key === "-") {
+      e.preventDefault();
+      handleZoomOut();
+    } else if (mod && e.key.toLowerCase() === "o") {
+      e.preventDefault();
+      handleOpen();
+    } else if (mod && e.key.toLowerCase() === "n") {
+      e.preventDefault();
+      handleNew();
+    } else if (e.key === "F5") {
+      e.preventDefault();
+      handlePlay();
+    } else if (e.key === "F6") {
+      e.preventDefault();
+      handleStop();
+    }
+  }
+
+  onMount(() => {
+    loadSettings();
+    refreshRuntimeStatus();
+
+    const unlisten: UnlistenFn[] = [];
+    listen("run_start", () => {
+      running = true;
+    }).then((u) => unlisten.push(u));
+    listen<string>("run_stdout", (e) => {
+      consoleLines = [...consoleLines, { kind: "out", text: e.payload }];
+      consoleExpanded = true;
+    }).then((u) => unlisten.push(u));
+    listen<string>("run_stderr", (e) => {
+      consoleLines = [...consoleLines, { kind: "err", text: e.payload }];
+      consoleExpanded = true;
+      // TODO(friendly-errors): interceptar lineas con prefijo ##ARCADEZERO##
+      // (JSON estructurado, ver PLAN.md §3.2) y mostrarlas como tarjeta de
+      // error amigable en vez de texto crudo, cuando exista el evento
+      // `run_error` (falta en el backend hoy, ver src-tauri/src/lib.rs).
+    }).then((u) => unlisten.push(u));
+    listen<number | null>("run_exit", () => {
+      running = false;
+    }).then((u) => unlisten.push(u));
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => {
+      unlisten.forEach((u) => u());
+      window.removeEventListener("keydown", handleKeydown);
+    };
+  });
 </script>
 
-<main class="container">
-  <h1>Welcome to Tauri + Svelte</h1>
+<div class="app">
+  <Toolbar
+    {running}
+    onnew={handleNew}
+    onopen={handleOpen}
+    onsave={handleSave}
+    onplay={handlePlay}
+    onstop={handleStop}
+    onzoomin={handleZoomIn}
+    onzoomout={handleZoomOut}
+  />
 
-  <div class="row">
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo vite" alt="Vite Logo" />
-    </a>
-    <a href="https://tauri.app" target="_blank">
-      <img src="/tauri.svg" class="logo tauri" alt="Tauri Logo" />
-    </a>
-    <a href="https://svelte.dev" target="_blank">
-      <img src="/svelte.svg" class="logo svelte-kit" alt="SvelteKit Logo" />
-    </a>
-  </div>
-  <p>Click on the Tauri, Vite, and SvelteKit logos to learn more.</p>
-
-  <form class="row" onsubmit={greet}>
-    <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-    <button type="submit">Greet</button>
-  </form>
-  <p>{greetMsg}</p>
-</main>
+  {#if !projectPath}
+    <div class="onboarding">
+      <div class="card">
+        <h1>{t("onboarding.title")}</h1>
+        <p>{t("onboarding.body")}</p>
+        <div class="actions">
+          <button class="primary" onclick={handleNew}>{t("onboarding.newBlank")}</button>
+          <button onclick={handleOpen}>{t("onboarding.openExisting")}</button>
+        </div>
+      </div>
+    </div>
+  {:else}
+    <div class="banner">{t("banner.firstRun")}</div>
+    <div class="main">
+      <CodeEditor bind:this={editor} bind:value={code} bind:fontSize />
+    </div>
+    <Console bind:lines={consoleLines} bind:expanded={consoleExpanded} />
+    <StatusBar fileName="main.py" saved={!dirty} {runtimeOk} />
+  {/if}
+</div>
 
 <style>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.svelte-kit:hover {
-  filter: drop-shadow(0 0 2em #ff3e00);
-}
-
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-.container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
   }
-
-  a:hover {
-    color: #24c8db;
+  .main {
+    flex: 1;
+    min-height: 0;
   }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
+  .banner {
+    padding: var(--az-space-1) var(--az-space-3);
+    background: var(--az-color-editor-active-line);
+    color: var(--az-color-text-muted);
+    font-size: 0.85rem;
   }
-  button:active {
-    background-color: #0f0f0f69;
+  .onboarding {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-}
-
+  .card {
+    max-width: 420px;
+    text-align: center;
+    padding: var(--az-space-4);
+    border: 1px solid var(--az-color-border);
+    border-radius: var(--az-radius);
+    background: var(--az-color-panel-bg);
+  }
+  .actions {
+    display: flex;
+    gap: var(--az-space-2);
+    justify-content: center;
+    margin-top: var(--az-space-3);
+  }
+  .actions button {
+    padding: var(--az-space-2) var(--az-space-3);
+    border-radius: var(--az-radius);
+    border: 1px solid var(--az-color-border);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .actions .primary {
+    background: var(--az-color-accent);
+    color: var(--az-color-accent-contrast);
+    border-color: var(--az-color-accent);
+  }
 </style>

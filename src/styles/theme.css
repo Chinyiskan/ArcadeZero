@@ -1,0 +1,83 @@
+/* Temas de ArcadeZero (PLAN.md §6.4). Solo tema Dia implementado en Fase 1;
+   Noche y Alto contraste (Fase 4) se agregan como bloques
+   `[data-theme='noche']` / `[data-theme='alto-contraste']` hermanos de
+   este, sin tocar el resto de la app. */
+
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/700.css";
+
+:root,
+[data-theme="dia"] {
+  /* Tipografia (JetBrains Mono, decidido en PLAN.md §2/§6.4) */
+  --az-font-ui: "JetBrains Mono", ui-monospace, monospace;
+  --az-font-editor: "JetBrains Mono", ui-monospace, monospace;
+  --az-editor-font-size: 16px;
+
+  /* Colores base */
+  --az-color-bg: #f5f6f8;
+  --az-color-panel-bg: #ffffff;
+  --az-color-border: #d7dbe0;
+  --az-color-text: #1c1f26;
+  --az-color-text-muted: #5b6472;
+  --az-color-accent: #2f6fed;
+  --az-color-accent-contrast: #ffffff;
+  --az-color-danger: #d1453b;
+  --az-color-success: #1f9d55;
+  --az-color-warning: #b8860b;
+  --az-color-focus: #2f6fed;
+
+  /* Editor */
+  --az-color-editor-bg: #ffffff;
+  --az-color-editor-gutter: #f0f2f5;
+  --az-color-editor-active-line: #eef3ff;
+
+  /* Guias de indentacion "rainbow" (nivel % 6), PLAN.md §6.5 */
+  --az-indent-0: #e06c75;
+  --az-indent-1: #d19a66;
+  --az-indent-2: #e5c07b;
+  --az-indent-3: #98c379;
+  --az-indent-4: #56b6c2;
+  --az-indent-5: #61afef;
+
+  /* Consola */
+  --az-color-console-bg: #14161a;
+  --az-color-console-text: #e6e6e6;
+  --az-color-console-err: #ff8a80;
+
+  /* Espaciado / radios, reusados por toolbar/paneles */
+  --az-space-1: 4px;
+  --az-space-2: 8px;
+  --az-space-3: 16px;
+  --az-space-4: 24px;
+  --az-radius: 6px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--az-color-bg);
+  color: var(--az-color-text);
+  font-family: var(--az-font-ui);
+}
+
+button {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--az-color-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

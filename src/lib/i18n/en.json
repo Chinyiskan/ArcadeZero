@@ -1,0 +1,22 @@
+{
+  "toolbar.new": "New",
+  "toolbar.open": "Open",
+  "toolbar.save": "Save",
+  "toolbar.play": "Play",
+  "toolbar.stop": "Stop",
+  "toolbar.zoomIn": "A+",
+  "toolbar.zoomOut": "A-",
+  "status.saved": "saved",
+  "status.unsaved": "unsaved",
+  "status.running": "game is running",
+  "status.stopped": "stopped",
+  "console.title": "Console",
+  "console.empty": "Your game's output will show up here.",
+  "onboarding.title": "Welcome to ArcadeZero!",
+  "onboarding.body": "You don't have a project open yet.",
+  "onboarding.newBlank": "New blank project",
+  "onboarding.openExisting": "Open an existing project",
+  "prompt.newProjectFolder": "Which folder should we create your new project in?",
+  "prompt.openProjectFolder": "Which project folder do you want to open?",
+  "banner.firstRun": "Press ▶ Play to see your game. Edit the code and play again."
+}
