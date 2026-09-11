@@ -1,7 +1,22 @@
 // Look visual del editor (PLAN.md §6.4): usa las variables CSS de
-// styles/theme.css, para que Noche / Alto contraste (Fase 4) solo cambien
-// las variables, no este archivo.
+// styles/theme.css, para que Dracula / One Dark Pro / Alto contraste solo
+// cambien las variables, no este archivo.
 import { EditorView } from "@codemirror/view";
+import { HighlightStyle } from "@codemirror/language";
+import { tags as t } from "@lezer/highlight";
+
+// Resaltado de sintaxis atado a las variables --az-syntax-* (theme.css), asi
+// que reacciona solo con cambiar `data-theme` en <html>, sin reconfigurar
+// CodeMirror (PLAN.md §6.4: 3 temas, mismo resaltado por variables).
+export const syntaxColors = HighlightStyle.define([
+  { tag: [t.keyword, t.controlKeyword, t.moduleKeyword], color: "var(--az-syntax-keyword)" },
+  { tag: [t.string, t.special(t.string)], color: "var(--az-syntax-string)" },
+  { tag: [t.comment, t.lineComment, t.blockComment], color: "var(--az-syntax-comment)", fontStyle: "italic" },
+  { tag: [t.number, t.bool, t.null], color: "var(--az-syntax-number)" },
+  { tag: [t.function(t.variableName), t.function(t.propertyName), t.className], color: "var(--az-syntax-function)" },
+  { tag: [t.operator, t.punctuation, t.bracket], color: "var(--az-syntax-operator)" },
+  { tag: [t.variableName, t.propertyName, t.definition(t.variableName)], color: "var(--az-syntax-variable)" },
+]);
 
 export const editorTheme = EditorView.theme({
   "&": {

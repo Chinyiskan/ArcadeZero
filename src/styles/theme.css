@@ -1,7 +1,12 @@
-/* Temas de ArcadeZero (PLAN.md §6.4). Solo tema Dia implementado en Fase 1;
-   Noche y Alto contraste (Fase 4) se agregan como bloques
-   `[data-theme='noche']` / `[data-theme='alto-contraste']` hermanos de
-   este, sin tocar el resto de la app. */
+/* Temas de ArcadeZero (PLAN.md §6.4). Dia (Fase 1), Dracula y One Dark Pro
+   (adelantados a Fase 2.5) ya implementados. Alto contraste (Fase 4) se
+   agrega como bloque `[data-theme='alto-contraste']` hermano de estos,
+   sin tocar el resto de la app.
+
+   Ademas de las variables `--az-color-*` de UI, cada tema define
+   `--az-syntax-*` (consumidas por src/lib/editor/theme.ts para el
+   resaltado de sintaxis de CodeMirror) e `--az-indent-0..5` (guias de
+   indentacion rainbow, src/lib/editor/indentGuides.ts). */
 
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
@@ -45,12 +50,95 @@
   --az-color-console-text: #e6e6e6;
   --az-color-console-err: #ff8a80;
 
+  /* Resaltado de sintaxis del editor (PLAN.md §6.4/§6.5) */
+  --az-syntax-keyword: #a626a4;
+  --az-syntax-string: #50a14f;
+  --az-syntax-comment: #a0a1a7;
+  --az-syntax-number: #986801;
+  --az-syntax-function: #4078f2;
+  --az-syntax-operator: #383a42;
+  --az-syntax-variable: #e45649;
+
   /* Espaciado / radios, reusados por toolbar/paneles */
   --az-space-1: 4px;
   --az-space-2: 8px;
   --az-space-3: 16px;
   --az-space-4: 24px;
   --az-radius: 6px;
+}
+
+[data-theme="dracula"] {
+  --az-color-bg: #21222c;
+  --az-color-panel-bg: #282a36;
+  --az-color-border: #44475a;
+  --az-color-text: #f8f8f2;
+  --az-color-text-muted: #6272a4;
+  --az-color-accent: #bd93f9;
+  --az-color-accent-contrast: #282a36;
+  --az-color-danger: #ff5555;
+  --az-color-success: #50fa7b;
+  --az-color-warning: #f1fa8c;
+  --az-color-focus: #ff79c6;
+
+  --az-color-editor-bg: #282a36;
+  --az-color-editor-gutter: #21222c;
+  --az-color-editor-active-line: #44475a;
+
+  --az-indent-0: #ff5555;
+  --az-indent-1: #ffb86c;
+  --az-indent-2: #f1fa8c;
+  --az-indent-3: #50fa7b;
+  --az-indent-4: #8be9fd;
+  --az-indent-5: #bd93f9;
+
+  --az-color-console-bg: #191a21;
+  --az-color-console-text: #f8f8f2;
+  --az-color-console-err: #ff5555;
+
+  --az-syntax-keyword: #ff79c6;
+  --az-syntax-string: #f1fa8c;
+  --az-syntax-comment: #6272a4;
+  --az-syntax-number: #bd93f9;
+  --az-syntax-function: #50fa7b;
+  --az-syntax-operator: #f8f8f2;
+  --az-syntax-variable: #8be9fd;
+}
+
+[data-theme="one-dark-pro"] {
+  --az-color-bg: #21252b;
+  --az-color-panel-bg: #282c34;
+  --az-color-border: #3e4451;
+  --az-color-text: #abb2bf;
+  --az-color-text-muted: #5c6370;
+  --az-color-accent: #61afef;
+  --az-color-accent-contrast: #282c34;
+  --az-color-danger: #e06c75;
+  --az-color-success: #98c379;
+  --az-color-warning: #d19a66;
+  --az-color-focus: #61afef;
+
+  --az-color-editor-bg: #282c34;
+  --az-color-editor-gutter: #21252b;
+  --az-color-editor-active-line: #2c313c;
+
+  --az-indent-0: #e06c75;
+  --az-indent-1: #d19a66;
+  --az-indent-2: #e5c07b;
+  --az-indent-3: #98c379;
+  --az-indent-4: #56b6c2;
+  --az-indent-5: #61afef;
+
+  --az-color-console-bg: #1b1e23;
+  --az-color-console-text: #abb2bf;
+  --az-color-console-err: #e06c75;
+
+  --az-syntax-keyword: #c678dd;
+  --az-syntax-string: #98c379;
+  --az-syntax-comment: #5c6370;
+  --az-syntax-number: #d19a66;
+  --az-syntax-function: #61afef;
+  --az-syntax-operator: #abb2bf;
+  --az-syntax-variable: #e06c75;
 }
 
 * {

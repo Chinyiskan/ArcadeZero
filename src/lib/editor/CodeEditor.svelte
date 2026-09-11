@@ -16,12 +16,7 @@
     indentWithTab,
   } from "@codemirror/commands";
   import { python, pythonLanguage } from "@codemirror/lang-python";
-  import {
-    bracketMatching,
-    defaultHighlightStyle,
-    indentUnit,
-    syntaxHighlighting,
-  } from "@codemirror/language";
+  import { bracketMatching, indentUnit, syntaxHighlighting } from "@codemirror/language";
   import {
     autocompletion,
     closeBrackets,
@@ -33,7 +28,7 @@
   import { arcadeZeroCompletions } from "./completions";
   import { indentGuides } from "./indentGuides";
   import { indentConsistencyLinter } from "./indentLint";
-  import { editorTheme, fontSizeTheme } from "./theme";
+  import { editorTheme, fontSizeTheme, syntaxColors } from "./theme";
 
   let {
     value = $bindable(""),
@@ -85,7 +80,7 @@
         closeBrackets(),
         bracketMatching(),
         indentUnit.of("    "),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        syntaxHighlighting(syntaxColors, { fallback: true }),
         python(),
         // Fuente propia sumada al localCompletionSource/globalCompletion
         // que ya activa python() por defecto (ver completions.ts).

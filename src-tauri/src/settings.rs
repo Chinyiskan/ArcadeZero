@@ -10,14 +10,16 @@ const FILE_NAME: &str = "settings.toml";
 #[serde(default)]
 pub struct Settings {
     pub sketches_dir: Option<String>,
-    pub theme: String,
+    /// `None` = nunca elegido por el usuario: el frontend debe respetar
+    /// `prefers-color-scheme` del SO (PLAN.md §6.4) en vez de un default fijo.
+    pub theme: Option<String>,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
             sketches_dir: None,
-            theme: "dia".to_string(),
+            theme: None,
         }
     }
 }
@@ -61,7 +63,7 @@ mod tests {
         let dir = temp_dir("roundtrip");
         let settings = Settings {
             sketches_dir: Some("D:/mis-juegos".into()),
-            theme: "noche".into(),
+            theme: Some("dracula".into()),
         };
         save(&dir, &settings).expect("guardar settings");
 

@@ -6,6 +6,7 @@
   "toolbar.stop": "Stop",
   "toolbar.zoomIn": "A+",
   "toolbar.zoomOut": "A-",
+  "toolbar.theme": "Change theme",
   "status.saved": "saved",
   "status.unsaved": "unsaved",
   "status.running": "game is running",

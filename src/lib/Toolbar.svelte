@@ -9,9 +9,17 @@
   import StopIcon from "phosphor-svelte/lib/StopIcon";
   import MagnifyingGlassPlusIcon from "phosphor-svelte/lib/MagnifyingGlassPlusIcon";
   import MagnifyingGlassMinusIcon from "phosphor-svelte/lib/MagnifyingGlassMinusIcon";
+  import PaletteIcon from "phosphor-svelte/lib/PaletteIcon";
+
+  const THEME_LABELS: Record<string, string> = {
+    dia: "Día",
+    dracula: "Dracula",
+    "one-dark-pro": "One Dark Pro",
+  };
 
   let {
     running = false,
+    theme = "dia",
     onnew,
     onopen,
     onsave,
@@ -19,8 +27,10 @@
     onstop,
     onzoomin,
     onzoomout,
+    ontheme,
   }: {
     running?: boolean;
+    theme?: string;
     onnew?: () => void;
     onopen?: () => void;
     onsave?: () => void;
@@ -28,6 +38,7 @@
     onstop?: () => void;
     onzoomin?: () => void;
     onzoomout?: () => void;
+    ontheme?: () => void;
   } = $props();
 
   const ICON_SIZE = 24;
@@ -77,6 +88,17 @@
   <button class="tbtn" onclick={onzoomin} title={`${t("toolbar.zoomIn")} (Ctrl +)`}>
     <MagnifyingGlassPlusIcon size={ICON_SIZE} aria-hidden="true" />
     <span>{t("toolbar.zoomIn")}</span>
+  </button>
+
+  <div class="sep" role="separator"></div>
+
+  <button
+    class="tbtn"
+    onclick={ontheme}
+    title={`${t("toolbar.theme")}: ${THEME_LABELS[theme] ?? theme}`}
+  >
+    <PaletteIcon size={ICON_SIZE} aria-hidden="true" />
+    <span>{THEME_LABELS[theme] ?? theme}</span>
   </button>
 </div>
 

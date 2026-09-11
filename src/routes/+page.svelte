@@ -10,8 +10,9 @@
   import AssetsPanel from "$lib/panels/AssetsPanel.svelte";
   import type { ConsoleLine } from "$lib/panels/types";
   import { t } from "$lib/i18n";
+  import { nextTheme, systemDefaultTheme, type ThemeName } from "$lib/theme";
 
-  type Settings = { sketches_dir: string | null; theme: string };
+  type Settings = { sketches_dir: string | null; theme: string | null };
 
   let projectPath = $state<string | null>(null);
   let code = $state("");
@@ -22,7 +23,8 @@
   let consoleExpanded = $state(false);
   let runtimeOk = $state<boolean | null>(null);
   let assetsCollapsed = $state(false);
-  let settings = $state<Settings>({ sketches_dir: null, theme: "dia" });
+  let settings = $state<Settings>({ sketches_dir: null, theme: null });
+  let theme = $state<ThemeName>("dia");
   let editor: CodeEditor | undefined = $state();
 
   const dirty = $derived(code !== savedCode);
@@ -30,9 +32,24 @@
   async function loadSettings() {
     try {
       settings = await invoke<Settings>("get_settings");
-      document.documentElement.dataset.theme = settings.theme || "dia";
+      // Sin tema guardado todavia: respeta prefers-color-scheme del SO
+      // (PLAN.md §6.4). No se persiste hasta que el usuario cicle manual.
+      const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+      theme = (settings.theme as ThemeName) || systemDefaultTheme(prefersDark);
+      document.documentElement.dataset.theme = theme;
     } catch (e) {
       console.error("get_settings fallo", e);
+    }
+  }
+
+  async function handleTheme() {
+    theme = nextTheme(theme);
+    document.documentElement.dataset.theme = theme;
+    settings = { ...settings, theme };
+    try {
+      await invoke("set_settings", { patch: settings });
+    } catch (e) {
+      console.error("set_settings fallo", e);
     }
   }
 
@@ -167,6 +184,7 @@
 <div class="app">
   <Toolbar
     {running}
+    {theme}
     onnew={handleNew}
     onopen={handleOpen}
     onsave={handleSave}
@@ -174,6 +192,7 @@
     onstop={handleStop}
     onzoomin={handleZoomIn}
     onzoomout={handleZoomOut}
+    ontheme={handleTheme}
   />
 
   {#if !projectPath}
