@@ -31,7 +31,12 @@
   let {
     projectPath,
     collapsed = $bindable(false),
-  }: { projectPath: string; collapsed?: boolean } = $props();
+    onopenimage,
+  }: {
+    projectPath: string;
+    collapsed?: boolean;
+    onopenimage?: (filename: string) => void;
+  } = $props();
 
   let assets = $state<Record<AssetKind, string[]>>({ images: [], sounds: [], music: [] });
   let error = $state<string | null>(null);
@@ -152,7 +157,17 @@
                   >
                 </span>
               {:else}
-                <span class="filename">{filename}</span>
+                {#if kind === "images"}
+                  <button
+                    class="filename-btn"
+                    onclick={() => onopenimage?.(filename)}
+                    title={`${t("assets.openPreview")} ${filename}`}
+                  >
+                    <span class="filename">{filename}</span>
+                  </button>
+                {:else}
+                  <span class="filename">{filename}</span>
+                {/if}
                 <button
                   class="icon-btn danger"
                   onclick={() => askDelete(kind, filename)}
@@ -240,6 +255,28 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .filename-btn {
+    display: block;
+    overflow: hidden;
+    min-width: 0;
+    flex: 1;
+    background: none;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    text-align: left;
+    cursor: pointer;
+    padding: 0;
+  }
+  .filename-btn:hover .filename,
+  .filename-btn:focus-visible .filename {
+    text-decoration: underline;
+  }
+  .filename-btn:focus-visible {
+    outline: 2px solid var(--az-color-accent);
+    outline-offset: 1px;
   }
   .icon-btn {
     display: inline-flex;

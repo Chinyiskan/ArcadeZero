@@ -11,10 +11,13 @@
   import ErrorCard from "$lib/panels/ErrorCard.svelte";
   import HelpPanel from "$lib/panels/HelpPanel.svelte";
   import TemplatePicker from "$lib/panels/TemplatePicker.svelte";
+  import TabBar from "$lib/TabBar.svelte";
+  import ImagePreview from "$lib/panels/ImagePreview.svelte";
   import type { ConsoleLine, StructuredError } from "$lib/panels/types";
   import { t, setLocale, type Locale } from "$lib/i18n";
   import { nextTheme, systemDefaultTheme, type ThemeName } from "$lib/theme";
   import type { TemplateId } from "$lib/templates";
+  import { activateTab, closeTab, initialTabs, openImageTab, type Tab } from "$lib/tabs";
 
   type Settings = {
     sketches_dir: string | null;
@@ -48,8 +51,27 @@
   let helpOpen = $state(false);
   let templatePickerOpen = $state(false);
   let editor: CodeEditor | undefined = $state();
+  let tabs = $state<Tab[]>(initialTabs());
+  let activeTabId = $state("main");
 
   const dirty = $derived(code !== savedCode);
+  const activeTab = $derived(tabs.find((tab) => tab.id === activeTabId) ?? tabs[0]);
+
+  function handleOpenImage(filename: string) {
+    const result = openImageTab(tabs, filename);
+    tabs = result.tabs;
+    activeTabId = result.activeId;
+  }
+
+  function handleActivateTab(id: string) {
+    activeTabId = activateTab(tabs, id);
+  }
+
+  function handleCloseTab(id: string) {
+    const result = closeTab(tabs, activeTabId, id);
+    tabs = result.tabs;
+    activeTabId = result.activeId;
+  }
 
   async function loadSettings() {
     try {
@@ -122,6 +144,8 @@
     projectPath = folder;
     code = content;
     savedCode = content;
+    tabs = initialTabs();
+    activeTabId = "main";
   }
 
   // ponytail: selector de carpeta con dialogo nativo (tauri-plugin-dialog);
@@ -300,9 +324,17 @@
   {:else}
     <div class="banner">{t("banner.firstRun")}</div>
     <div class="workspace">
-      <AssetsPanel {projectPath} bind:collapsed={assetsCollapsed} />
+      <AssetsPanel {projectPath} bind:collapsed={assetsCollapsed} onopenimage={handleOpenImage} />
       <div class="main">
-        <CodeEditor bind:this={editor} bind:value={code} bind:fontSize />
+        <TabBar {tabs} activeId={activeTabId} onactivate={handleActivateTab} onclose={handleCloseTab} />
+        <div class="main-body">
+          <div class="editor-slot" style:display={activeTab?.kind === "main" ? "block" : "none"}>
+            <CodeEditor bind:this={editor} bind:value={code} bind:fontSize />
+          </div>
+          {#if activeTab && activeTab.kind === "image" && projectPath}
+            <ImagePreview {projectPath} filename={activeTab.filename} />
+          {/if}
+        </div>
       </div>
     </div>
     {#if runError}
@@ -328,6 +360,24 @@
     flex: 1;
     min-height: 0;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .main-body {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-areas: "stack";
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+  }
+  .main-body > :global(*) {
+    grid-area: stack;
+    min-height: 0;
+    min-width: 0;
+  }
+  .editor-slot {
+    height: 100%;
   }
   .banner {
     padding: var(--az-space-1) var(--az-space-3);

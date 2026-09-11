@@ -234,6 +234,25 @@ pub fn delete_asset(project_path: String, kind: String, filename: String) -> Res
     delete_asset_from(Path::new(&project_path), &kind, &filename)
 }
 
+/// Bytes crudos de un asset, para la previsualización de imágenes en el
+/// frontend (PLAN.md §6.1). El frontend arma un `Blob`/`URL.createObjectURL`
+/// con esto — evitamos abrir el protocolo `asset:`/su scope de filesystem
+/// para carpetas de sketch arbitrarias (el usuario elige la carpeta en
+/// runtime, no hay una raíz fija que declarar en `capabilities/`); este
+/// comando ya valida `kind`/`filename` igual que `delete_asset`.
+///
+/// ponytail: sketches de pgzero son sprites pequeños (KB, no MB), así que
+/// serializar como `Vec<u8>` (array JSON) es suficiente; si algún día se
+/// abre a imágenes grandes, ahí vale la pena el protocolo `asset:` con scope
+/// por-sketch registrado dinámicamente.
+#[tauri::command]
+pub fn read_asset_bytes(project_path: String, kind: String, filename: String) -> Result<Vec<u8>, String> {
+    let subdir = validate_kind(&kind)?;
+    validate_plain_filename(&filename)?;
+    let path = Path::new(&project_path).join(subdir).join(&filename);
+    fs::read(&path).map_err(|e| format!("No se pudo leer {}: {e}", path.display()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -320,6 +339,34 @@ mod tests {
     fn delete_rejects_path_traversal() {
         let sketch = temp_sketch("traversal");
         let result = delete_asset_from(&sketch, "images", "../../etc/passwd");
+        assert!(result.is_err());
+        fs::remove_dir_all(&sketch).ok();
+    }
+
+    #[test]
+    fn read_asset_bytes_returns_file_contents() {
+        let sketch = temp_sketch("read-bytes");
+        fs::write(sketch.join("images").join("nave.png"), b"fake png bytes").unwrap();
+
+        let bytes = read_asset_bytes(
+            sketch.display().to_string(),
+            "images".to_string(),
+            "nave.png".to_string(),
+        )
+        .expect("leer bytes");
+        assert_eq!(bytes, b"fake png bytes");
+
+        fs::remove_dir_all(&sketch).ok();
+    }
+
+    #[test]
+    fn read_asset_bytes_rejects_path_traversal() {
+        let sketch = temp_sketch("read-bytes-traversal");
+        let result = read_asset_bytes(
+            sketch.display().to_string(),
+            "images".to_string(),
+            "../../etc/passwd".to_string(),
+        );
         assert!(result.is_err());
         fs::remove_dir_all(&sketch).ok();
     }

@@ -36,6 +36,7 @@ pub fn run() {
             assets::list_assets,
             assets::import_asset,
             assets::delete_asset,
+            assets::read_asset_bytes,
             get_settings,
             set_settings,
         ])
