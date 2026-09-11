@@ -48,6 +48,12 @@
     dims = { w: img.naturalWidth, h: img.naturalHeight };
   }
 
+  // ponytail: si el navegador bloquea/falla la carga del blob (CSP, archivo
+  // corrupto, etc.) esto evita quedarnos en blanco sin explicar nada.
+  function handleImgError() {
+    error = `${t("preview.loadError")}: no se pudo mostrar la imagen`;
+  }
+
   $effect(() => {
     load(filename);
   });
@@ -64,7 +70,7 @@
     <p class="error">{error}</p>
   {:else if url}
     <div class="canvas">
-      <img src={url} alt={filename} onload={handleLoad} />
+      <img src={url} alt={filename} onload={handleLoad} onerror={handleImgError} />
     </div>
     <p class="meta">
       {filename}
