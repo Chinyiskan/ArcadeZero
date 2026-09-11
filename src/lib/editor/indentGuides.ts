@@ -41,7 +41,7 @@ export function guideStyle(level: number, unit = 4): string {
     const color = `var(--az-indent-${i % PALETTE_SIZE})`;
     layers.push(`linear-gradient(${color}, ${color})`);
     positions.push(`${i * unit}ch 0`);
-    sizes.push("1px 100%");
+    sizes.push("var(--az-indent-width, 1px) 100%");
   }
   return (
     `background-image:${layers.join(",")};` +

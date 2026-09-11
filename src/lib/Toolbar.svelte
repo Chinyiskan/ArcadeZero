@@ -10,16 +10,20 @@
   import MagnifyingGlassPlusIcon from "phosphor-svelte/lib/MagnifyingGlassPlusIcon";
   import MagnifyingGlassMinusIcon from "phosphor-svelte/lib/MagnifyingGlassMinusIcon";
   import PaletteIcon from "phosphor-svelte/lib/PaletteIcon";
+  import GearSixIcon from "phosphor-svelte/lib/GearSixIcon";
 
   const THEME_LABELS: Record<string, string> = {
     dia: "Día",
     dracula: "Dracula",
     "one-dark-pro": "One Dark Pro",
+    "alto-contraste": "Alto contraste",
   };
 
   let {
     running = false,
     theme = "dia",
+    dyslexicFont = false,
+    uiScale = "normal",
     onnew,
     onopen,
     onsave,
@@ -28,9 +32,13 @@
     onzoomin,
     onzoomout,
     ontheme,
+    ondyslexicfont,
+    onuiscale,
   }: {
     running?: boolean;
     theme?: string;
+    dyslexicFont?: boolean;
+    uiScale?: string;
     onnew?: () => void;
     onopen?: () => void;
     onsave?: () => void;
@@ -39,9 +47,12 @@
     onzoomin?: () => void;
     onzoomout?: () => void;
     ontheme?: () => void;
+    ondyslexicfont?: (value: boolean) => void;
+    onuiscale?: (value: string) => void;
   } = $props();
 
   const ICON_SIZE = 24;
+  let settingsOpen = $state(false);
 </script>
 
 <div class="toolbar" role="toolbar" aria-label="Barra de herramientas">
@@ -100,6 +111,45 @@
     <PaletteIcon size={ICON_SIZE} aria-hidden="true" />
     <span>{THEME_LABELS[theme] ?? theme}</span>
   </button>
+
+  <div class="sep" role="separator"></div>
+
+  <div class="settings-wrap">
+    <button
+      class="tbtn"
+      onclick={() => (settingsOpen = !settingsOpen)}
+      title={t("toolbar.settings")}
+      aria-expanded={settingsOpen}
+      aria-haspopup="true"
+    >
+      <GearSixIcon size={ICON_SIZE} aria-hidden="true" />
+      <span>{t("toolbar.settings")}</span>
+    </button>
+    {#if settingsOpen}
+      <div class="settings-popover" role="dialog" aria-label={t("settings.title")}>
+        <h3>{t("settings.title")}</h3>
+        <label class="row">
+          <input
+            type="checkbox"
+            checked={dyslexicFont}
+            onchange={(e) => ondyslexicfont?.(e.currentTarget.checked)}
+          />
+          {t("settings.dyslexicFont")}
+        </label>
+        <label class="row">
+          {t("settings.uiScale")}
+          <select value={uiScale} onchange={(e) => onuiscale?.(e.currentTarget.value)}>
+            <option value="normal">{t("settings.uiScaleNormal")}</option>
+            <option value="grande">{t("settings.uiScaleLarge")}</option>
+            <option value="muy-grande">{t("settings.uiScaleExtraLarge")}</option>
+          </select>
+        </label>
+        <button class="close-btn" onclick={() => (settingsOpen = false)}>
+          {t("settings.close")}
+        </button>
+      </div>
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -144,5 +194,54 @@
   }
   .danger {
     color: var(--az-color-danger);
+  }
+  .settings-wrap {
+    position: relative;
+  }
+  .settings-popover {
+    position: absolute;
+    top: calc(100% + var(--az-space-1));
+    right: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: var(--az-space-2);
+    min-width: 240px;
+    padding: var(--az-space-3);
+    background: var(--az-color-panel-bg);
+    border: 1px solid var(--az-color-border);
+    border-radius: var(--az-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  .settings-popover h3 {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--az-space-2);
+    font-size: 0.85rem;
+  }
+  .row select {
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 2px 4px;
+    border-radius: var(--az-radius);
+    border: 1px solid var(--az-color-border);
+    background: var(--az-color-panel-bg);
+    color: var(--az-color-text);
+  }
+  .close-btn {
+    align-self: flex-end;
+    padding: var(--az-space-1) var(--az-space-2);
+    border-radius: var(--az-radius);
+    border: 1px solid var(--az-color-border);
+    background: none;
+    color: var(--az-color-text);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.8rem;
   }
 </style>

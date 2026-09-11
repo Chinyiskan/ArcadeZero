@@ -13,7 +13,12 @@
   import { t } from "$lib/i18n";
   import { nextTheme, systemDefaultTheme, type ThemeName } from "$lib/theme";
 
-  type Settings = { sketches_dir: string | null; theme: string | null };
+  type Settings = {
+    sketches_dir: string | null;
+    theme: string | null;
+    dyslexic_font: boolean | null;
+    ui_scale: string | null;
+  };
 
   let projectPath = $state<string | null>(null);
   let code = $state("");
@@ -25,8 +30,15 @@
   let runError = $state<StructuredError | null>(null);
   let runtimeOk = $state<boolean | null>(null);
   let assetsCollapsed = $state(false);
-  let settings = $state<Settings>({ sketches_dir: null, theme: null });
+  let settings = $state<Settings>({
+    sketches_dir: null,
+    theme: null,
+    dyslexic_font: null,
+    ui_scale: null,
+  });
   let theme = $state<ThemeName>("dia");
+  let dyslexicFont = $state(false);
+  let uiScale = $state("normal");
   let editor: CodeEditor | undefined = $state();
 
   const dirty = $derived(code !== savedCode);
@@ -39,20 +51,44 @@
       const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
       theme = (settings.theme as ThemeName) || systemDefaultTheme(prefersDark);
       document.documentElement.dataset.theme = theme;
+      dyslexicFont = settings.dyslexic_font ?? false;
+      uiScale = settings.ui_scale ?? "normal";
+      applyAccessibilitySettings();
     } catch (e) {
       console.error("get_settings fallo", e);
+    }
+  }
+
+  function applyAccessibilitySettings() {
+    document.documentElement.dataset.font = dyslexicFont ? "opendyslexic" : "";
+    document.documentElement.dataset.uiScale = uiScale;
+  }
+
+  async function persistSettings(patch: Partial<Settings>) {
+    settings = { ...settings, ...patch };
+    try {
+      await invoke("set_settings", { patch: settings });
+    } catch (e) {
+      console.error("set_settings fallo", e);
     }
   }
 
   async function handleTheme() {
     theme = nextTheme(theme);
     document.documentElement.dataset.theme = theme;
-    settings = { ...settings, theme };
-    try {
-      await invoke("set_settings", { patch: settings });
-    } catch (e) {
-      console.error("set_settings fallo", e);
-    }
+    await persistSettings({ theme });
+  }
+
+  async function handleDyslexicFont(value: boolean) {
+    dyslexicFont = value;
+    applyAccessibilitySettings();
+    await persistSettings({ dyslexic_font: value });
+  }
+
+  async function handleUiScale(value: string) {
+    uiScale = value;
+    applyAccessibilitySettings();
+    await persistSettings({ ui_scale: value });
   }
 
   async function refreshRuntimeStatus() {
@@ -192,6 +228,8 @@
   <Toolbar
     {running}
     {theme}
+    {dyslexicFont}
+    {uiScale}
     onnew={handleNew}
     onopen={handleOpen}
     onsave={handleSave}
@@ -200,6 +238,8 @@
     onzoomin={handleZoomIn}
     onzoomout={handleZoomOut}
     ontheme={handleTheme}
+    ondyslexicfont={handleDyslexicFont}
+    onuiscale={handleUiScale}
   />
 
   {#if !projectPath}

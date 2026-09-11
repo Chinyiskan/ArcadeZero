@@ -11,6 +11,11 @@
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
 @import "@fontsource/jetbrains-mono/700.css";
+/* Alternativa de accesibilidad (PLAN.md §6.4): fuente OpenDyslexic para el
+   editor, activable con [data-font='opendyslexic'] en <html> (ver
+   src/routes/+page.svelte, settings.dyslexic_font). */
+@import "@fontsource/opendyslexic/400.css";
+@import "@fontsource/opendyslexic/700.css";
 
 :root,
 [data-theme="dia"] {
@@ -44,6 +49,13 @@
   --az-indent-3: #98c379;
   --az-indent-4: #56b6c2;
   --az-indent-5: #61afef;
+  /* Ancho de las guias: alto-contraste lo engrosa para no depender solo del
+     color (PLAN.md §6.4, accesibilidad). */
+  --az-indent-width: 1px;
+
+  /* Escalado global de UI (PLAN.md §6.4/§11 Fase 4): normal/grande/muy
+     grande, controlado desde el mismo ajuste que la fuente OpenDyslexic. */
+  --az-ui-scale: 1;
 
   /* Consola */
   --az-color-console-bg: #14161a;
@@ -141,6 +153,61 @@
   --az-syntax-variable: #e06c75;
 }
 
+/* Alto contraste (PLAN.md §6.4/§11 Fase 4): negro puro / blanco puro,
+   colores saturados con contraste AAA contra el fondo, foco en cian bien
+   distinto del acento para no depender solo del color. */
+[data-theme="alto-contraste"] {
+  --az-color-bg: #000000;
+  --az-color-panel-bg: #0a0a0a;
+  --az-color-border: #ffffff;
+  --az-color-text: #ffffff;
+  --az-color-text-muted: #cccccc;
+  --az-color-accent: #ffff00;
+  --az-color-accent-contrast: #000000;
+  --az-color-danger: #ff6b6b;
+  --az-color-success: #00ff66;
+  --az-color-warning: #ffa500;
+  --az-color-focus: #00ffff;
+
+  --az-color-editor-bg: #000000;
+  --az-color-editor-gutter: #0a0a0a;
+  --az-color-editor-active-line: #262626;
+
+  --az-indent-0: #ffffff;
+  --az-indent-1: #ffff00;
+  --az-indent-2: #00ffff;
+  --az-indent-3: #ff00ff;
+  --az-indent-4: #ffa500;
+  --az-indent-5: #7fff00;
+  --az-indent-width: 3px;
+
+  --az-color-console-bg: #000000;
+  --az-color-console-text: #ffffff;
+  --az-color-console-err: #ff6b6b;
+
+  --az-syntax-keyword: #ffff00;
+  --az-syntax-string: #00ff66;
+  --az-syntax-comment: #aaaaaa;
+  --az-syntax-number: #ffa500;
+  --az-syntax-function: #00ffff;
+  --az-syntax-operator: #ffffff;
+  --az-syntax-variable: #ff6b6b;
+}
+
+/* Fuente OpenDyslexic (PLAN.md §6.4): solo cambia la fuente del editor, la
+   de UI/branding sigue siendo JetBrains Mono (decidido, no se reabre). */
+[data-font="opendyslexic"] {
+  --az-font-editor: "OpenDyslexic", "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* Escalado global de UI (PLAN.md §11 Fase 4): 3 niveles, ver theme.ts. */
+[data-ui-scale="grande"] {
+  --az-ui-scale: 1.15;
+}
+[data-ui-scale="muy-grande"] {
+  --az-ui-scale: 1.3;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -154,12 +221,27 @@ body {
   font-family: var(--az-font-ui);
 }
 
+html {
+  /* Escalado global de UI. `zoom` (no estandar pero soportado por el
+     WebView2/Chromium que usa Tauri en Windows, plataforma unica de v1,
+     PLAN.md §11 Fase 1) escala texto, iconos y espaciados a la vez sin
+     tocar cada componente. */
+  zoom: var(--az-ui-scale);
+}
+
 button {
   font-family: inherit;
 }
 
 :focus-visible {
   outline: 2px solid var(--az-color-focus);
+  outline-offset: 2px;
+}
+
+[data-theme="alto-contraste"] :focus-visible {
+  /* Mas grueso: en alto contraste el foco no puede depender de un matiz
+     sutil, tiene que ser imposible de perder. */
+  outline: 3px solid var(--az-color-focus);
   outline-offset: 2px;
 }
 

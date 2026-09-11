@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { nextTheme, systemDefaultTheme, isThemeName, THEMES } from "./theme";
 
 describe("nextTheme", () => {
-  it("cicla dia -> dracula -> one-dark-pro -> dia", () => {
+  it("cicla dia -> dracula -> one-dark-pro -> alto-contraste -> dia", () => {
     expect(nextTheme("dia")).toBe("dracula");
     expect(nextTheme("dracula")).toBe("one-dark-pro");
-    expect(nextTheme("one-dark-pro")).toBe("dia");
+    expect(nextTheme("one-dark-pro")).toBe("alto-contraste");
+    expect(nextTheme("alto-contraste")).toBe("dia");
   });
 
   it("vuelve a dia si el tema actual es desconocido", () => {
@@ -24,7 +25,7 @@ describe("systemDefaultTheme", () => {
 });
 
 describe("isThemeName / THEMES", () => {
-  it("valida solo los 3 temas soportados", () => {
+  it("valida solo los 4 temas soportados", () => {
     for (const name of THEMES) expect(isThemeName(name)).toBe(true);
     expect(isThemeName("noche")).toBe(false);
   });

@@ -1,6 +1,7 @@
 // Ciclo de temas de la toolbar (PLAN.md §6.4): Dia -> Dracula -> One Dark
-// Pro -> Dia... Logica pura y testeable a proposito (ver theme.test.ts).
-export const THEMES = ["dia", "dracula", "one-dark-pro"] as const;
+// Pro -> Alto contraste -> Dia... Logica pura y testeable a proposito (ver
+// theme.test.ts).
+export const THEMES = ["dia", "dracula", "one-dark-pro", "alto-contraste"] as const;
 export type ThemeName = (typeof THEMES)[number];
 
 export function isThemeName(value: string): value is ThemeName {

@@ -13,6 +13,12 @@ pub struct Settings {
     /// `None` = nunca elegido por el usuario: el frontend debe respetar
     /// `prefers-color-scheme` del SO (PLAN.md §6.4) en vez de un default fijo.
     pub theme: Option<String>,
+    /// Accesibilidad (PLAN.md §6.4/§11 Fase 4): usar OpenDyslexic en vez de
+    /// JetBrains Mono en el editor. `None`/`false` = fuente por defecto.
+    pub dyslexic_font: Option<bool>,
+    /// Escalado global de UI: "normal" | "grande" | "muy-grande". `None` =
+    /// normal (ver `src/lib/theme.ts`).
+    pub ui_scale: Option<String>,
 }
 
 impl Default for Settings {
@@ -20,6 +26,8 @@ impl Default for Settings {
         Self {
             sketches_dir: None,
             theme: None,
+            dyslexic_font: None,
+            ui_scale: None,
         }
     }
 }
@@ -64,6 +72,8 @@ mod tests {
         let settings = Settings {
             sketches_dir: Some("D:/mis-juegos".into()),
             theme: Some("dracula".into()),
+            dyslexic_font: Some(true),
+            ui_scale: Some("grande".into()),
         };
         save(&dir, &settings).expect("guardar settings");
 
