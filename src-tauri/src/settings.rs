@@ -19,6 +19,9 @@ pub struct Settings {
     /// Escalado global de UI: "normal" | "grande" | "muy-grande". `None` =
     /// normal (ver `src/lib/theme.ts`).
     pub ui_scale: Option<String>,
+    /// Idioma de la UI: "es" | "en" (PLAN.md §2/§11 Fase 4). `None` = español
+    /// por defecto (ver `src/lib/i18n/locale.svelte.ts`).
+    pub locale: Option<String>,
 }
 
 impl Default for Settings {
@@ -28,6 +31,7 @@ impl Default for Settings {
             theme: None,
             dyslexic_font: None,
             ui_scale: None,
+            locale: None,
         }
     }
 }
@@ -74,6 +78,7 @@ mod tests {
             theme: Some("dracula".into()),
             dyslexic_font: Some(true),
             ui_scale: Some("grande".into()),
+            locale: Some("en".into()),
         };
         save(&dir, &settings).expect("guardar settings");
 

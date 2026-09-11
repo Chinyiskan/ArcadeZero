@@ -11,6 +11,7 @@
   import MagnifyingGlassMinusIcon from "phosphor-svelte/lib/MagnifyingGlassMinusIcon";
   import PaletteIcon from "phosphor-svelte/lib/PaletteIcon";
   import GearSixIcon from "phosphor-svelte/lib/GearSixIcon";
+  import QuestionIcon from "phosphor-svelte/lib/QuestionIcon";
 
   const THEME_LABELS: Record<string, string> = {
     dia: "Día",
@@ -24,6 +25,7 @@
     theme = "dia",
     dyslexicFont = false,
     uiScale = "normal",
+    locale = "es",
     onnew,
     onopen,
     onsave,
@@ -34,11 +36,14 @@
     ontheme,
     ondyslexicfont,
     onuiscale,
+    onlocale,
+    onhelp,
   }: {
     running?: boolean;
     theme?: string;
     dyslexicFont?: boolean;
     uiScale?: string;
+    locale?: string;
     onnew?: () => void;
     onopen?: () => void;
     onsave?: () => void;
@@ -49,6 +54,8 @@
     ontheme?: () => void;
     ondyslexicfont?: (value: boolean) => void;
     onuiscale?: (value: string) => void;
+    onlocale?: (value: string) => void;
+    onhelp?: () => void;
   } = $props();
 
   const ICON_SIZE = 24;
@@ -144,12 +151,24 @@
             <option value="muy-grande">{t("settings.uiScaleExtraLarge")}</option>
           </select>
         </label>
+        <label class="row">
+          {t("settings.locale")}
+          <select value={locale} onchange={(e) => onlocale?.(e.currentTarget.value)}>
+            <option value="es">Español</option>
+            <option value="en">English</option>
+          </select>
+        </label>
         <button class="close-btn" onclick={() => (settingsOpen = false)}>
           {t("settings.close")}
         </button>
       </div>
     {/if}
   </div>
+
+  <button class="tbtn" onclick={onhelp} title={`${t("toolbar.help")} (F1)`}>
+    <QuestionIcon size={ICON_SIZE} aria-hidden="true" />
+    <span>{t("toolbar.help")}</span>
+  </button>
 </div>
 
 <style>

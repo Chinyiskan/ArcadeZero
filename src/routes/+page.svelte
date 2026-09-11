@@ -9,15 +9,19 @@
   import Console from "$lib/panels/Console.svelte";
   import AssetsPanel from "$lib/panels/AssetsPanel.svelte";
   import ErrorCard from "$lib/panels/ErrorCard.svelte";
+  import HelpPanel from "$lib/panels/HelpPanel.svelte";
+  import TemplatePicker from "$lib/panels/TemplatePicker.svelte";
   import type { ConsoleLine, StructuredError } from "$lib/panels/types";
-  import { t } from "$lib/i18n";
+  import { t, setLocale, type Locale } from "$lib/i18n";
   import { nextTheme, systemDefaultTheme, type ThemeName } from "$lib/theme";
+  import type { TemplateId } from "$lib/templates";
 
   type Settings = {
     sketches_dir: string | null;
     theme: string | null;
     dyslexic_font: boolean | null;
     ui_scale: string | null;
+    locale: string | null;
   };
 
   let projectPath = $state<string | null>(null);
@@ -35,10 +39,14 @@
     theme: null,
     dyslexic_font: null,
     ui_scale: null,
+    locale: null,
   });
   let theme = $state<ThemeName>("dia");
   let dyslexicFont = $state(false);
   let uiScale = $state("normal");
+  let locale = $state<Locale>("es");
+  let helpOpen = $state(false);
+  let templatePickerOpen = $state(false);
   let editor: CodeEditor | undefined = $state();
 
   const dirty = $derived(code !== savedCode);
@@ -53,6 +61,8 @@
       document.documentElement.dataset.theme = theme;
       dyslexicFont = settings.dyslexic_font ?? false;
       uiScale = settings.ui_scale ?? "normal";
+      locale = (settings.locale as Locale) || "es";
+      setLocale(locale);
       applyAccessibilitySettings();
     } catch (e) {
       console.error("get_settings fallo", e);
@@ -91,6 +101,12 @@
     await persistSettings({ ui_scale: value });
   }
 
+  async function handleLocale(value: string) {
+    locale = value as Locale;
+    setLocale(locale);
+    await persistSettings({ locale: value });
+  }
+
   async function refreshRuntimeStatus() {
     try {
       const status = await invoke<{ pgzero_ok: boolean }>("runtime_status");
@@ -120,13 +136,18 @@
     }
   }
 
-  async function handleNew() {
+  function handleNew() {
+    templatePickerOpen = true;
+  }
+
+  async function handleTemplatePicked(templateId: TemplateId) {
+    templatePickerOpen = false;
     const parent = await pickDirectory(t("prompt.newProjectParent"), settings.sketches_dir ?? undefined);
     if (!parent) return;
     const name = window.prompt(t("prompt.newProjectName"), "mi-juego");
     if (!name) return;
     const dest = `${parent}\\${name}`;
-    const folder = await invoke<string>("new_project", { template: "en-blanco", dest });
+    const folder = await invoke<string>("new_project", { template: templateId, dest });
     await openAt(folder);
   }
 
@@ -189,6 +210,12 @@
     } else if (e.key === "F6") {
       e.preventDefault();
       handleStop();
+    } else if (e.key === "F1") {
+      e.preventDefault();
+      helpOpen = true;
+    } else if (e.key === "Escape") {
+      if (helpOpen) helpOpen = false;
+      else if (templatePickerOpen) templatePickerOpen = false;
     }
   }
 
@@ -230,6 +257,7 @@
     {theme}
     {dyslexicFont}
     {uiScale}
+    {locale}
     onnew={handleNew}
     onopen={handleOpen}
     onsave={handleSave}
@@ -240,6 +268,22 @@
     ontheme={handleTheme}
     ondyslexicfont={handleDyslexicFont}
     onuiscale={handleUiScale}
+    onlocale={handleLocale}
+    onhelp={() => (helpOpen = true)}
+  />
+
+  <TemplatePicker
+    open={templatePickerOpen}
+    onpick={handleTemplatePicked}
+    onclose={() => (templatePickerOpen = false)}
+  />
+  <HelpPanel
+    open={helpOpen}
+    onclose={() => (helpOpen = false)}
+    onbrowsetemplates={() => {
+      helpOpen = false;
+      templatePickerOpen = true;
+    }}
   />
 
   {#if !projectPath}

@@ -1,23 +1,5 @@
-// i18n minimo (PLAN.md §6.4): claves desde el dia 1, ES por defecto.
-// El selector de idioma completo (UI, persistencia en settings) es Fase 4;
-// hoy solo exponemos `t(key)` reactivo a un locale en memoria.
-import es from "./es.json";
-import en from "./en.json";
-
-export type Locale = "es" | "en";
-
-const DICTIONARIES: Record<Locale, Record<string, string>> = { es, en };
-
-let currentLocale: Locale = "es";
-
-export function setLocale(locale: Locale) {
-  currentLocale = locale;
-}
-
-export function getLocale(): Locale {
-  return currentLocale;
-}
-
-export function t(key: string): string {
-  return DICTIONARIES[currentLocale][key] ?? DICTIONARIES.es[key] ?? key;
-}
+// i18n (PLAN.md §6.4/§11 Fase 4): claves ES/EN, ES por defecto. La
+// implementacion vive en `locale.svelte.ts` (necesita `$state` para que la
+// UI reaccione al cambio de idioma) — este archivo es el punto de entrada
+// estable para `import { t } from "$lib/i18n"`.
+export { t, setLocale, getLocale, type Locale } from "./locale.svelte";
