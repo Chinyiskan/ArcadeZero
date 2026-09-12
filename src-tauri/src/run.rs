@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
@@ -29,30 +29,42 @@ pub struct RuntimeStatus {
 
 /// Resuelve la carpeta del runtime embebido armado por `build_runtime.py`.
 ///
+/// En dev, `runtime/dist/windows-x64` vive junto al codigo fuente (relativo
+/// a `CARGO_MANIFEST_DIR`, resuelto en compilacion). En un build instalado
+/// esa ruta no existe en la maquina del usuario: el runtime se empaqueta
+/// como resource de Tauri (ver `tauri.conf.json` `bundle.resources`) y hay
+/// que preguntarle al `AppHandle` donde quedo en tiempo de ejecucion.
+///
 /// ponytail: hardcodea windows-x64 (unico target de Fase 0-1); agregar
 /// deteccion de plataforma cuando Fase 5 arme runtimes de mac/linux.
 /// Override para tests/dev: env var `ARCADEZERO_RUNTIME_DIR`.
-fn runtime_dir() -> PathBuf {
+fn runtime_dir(app: &AppHandle) -> Result<PathBuf, String> {
     if let Ok(dir) = std::env::var("ARCADEZERO_RUNTIME_DIR") {
-        return PathBuf::from(dir);
+        return Ok(PathBuf::from(dir));
     }
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("runtime")
-        .join("dist")
-        .join("windows-x64")
+    if cfg!(debug_assertions) {
+        return Ok(PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("runtime")
+            .join("dist")
+            .join("windows-x64"));
+    }
+    app.path()
+        .resource_dir()
+        .map(|dir| dir.join("runtime"))
+        .map_err(|e| format!("No se pudo resolver la carpeta de recursos de la app: {e}"))
 }
 
-pub(crate) fn python_exe() -> PathBuf {
-    runtime_dir().join("python").join("python.exe")
+pub(crate) fn python_exe(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(runtime_dir(app)?.join("python").join("python.exe"))
 }
 
-fn launcher_py() -> PathBuf {
-    runtime_dir().join("launcher.py")
+fn launcher_py(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(runtime_dir(app)?.join("launcher.py"))
 }
 
-pub(crate) fn vendored_dir() -> PathBuf {
-    runtime_dir().join("vendored")
+pub(crate) fn vendored_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(runtime_dir(app)?.join("vendored"))
 }
 
 /// Valida que `path` sea una carpeta de sketch abrible (tiene `main.py`).
@@ -98,7 +110,7 @@ pub async fn run_project(
 ) -> Result<(), String> {
     let sketch_dir = validate_sketch_dir(Path::new(&path))?;
 
-    let python = python_exe();
+    let python = python_exe(&app)?;
     if !python.is_file() {
         return Err(format!(
             "No se encontro el Python embebido en {}",
@@ -115,7 +127,7 @@ pub async fn run_project(
     }
 
     let mut child = Command::new(&python)
-        .arg(launcher_py())
+        .arg(launcher_py(&app)?)
         .arg(&sketch_dir)
         .current_dir(&sketch_dir)
         .stdout(std::process::Stdio::piped())
@@ -183,8 +195,18 @@ pub async fn stop_run(state: State<'_, RunState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn runtime_status() -> RuntimeStatus {
-    let python = python_exe();
+pub async fn runtime_status(app: AppHandle) -> RuntimeStatus {
+    let python = match python_exe(&app) {
+        Ok(p) => p,
+        Err(e) => {
+            return RuntimeStatus {
+                python_found: false,
+                python_path: String::new(),
+                pgzero_ok: false,
+                detail: e,
+            };
+        }
+    };
     if !python.is_file() {
         return RuntimeStatus {
             python_found: false,
@@ -194,9 +216,20 @@ pub async fn runtime_status() -> RuntimeStatus {
         };
     }
 
+    let vendored = match vendored_dir(&app) {
+        Ok(v) => v,
+        Err(e) => {
+            return RuntimeStatus {
+                python_found: true,
+                python_path: python.display().to_string(),
+                pgzero_ok: false,
+                detail: e,
+            };
+        }
+    };
     let check = format!(
         "import sys; sys.path.insert(0, r'{}'); import pgzero; import pygame",
-        vendored_dir().display()
+        vendored.display()
     );
     match Command::new(&python).arg("-c").arg(check).output().await {
         Ok(out) if out.status.success() => RuntimeStatus {

@@ -71,5 +71,12 @@
   "templates.mi-primer-sprite.name": "My first sprite",
   "templates.mi-primer-sprite.desc": "An alien that moves with the arrow keys.",
   "templates.plataformas-basico.name": "Basic platformer",
-  "templates.plataformas-basico.desc": "A character that walks, jumps and falls with gravity."
+  "templates.plataformas-basico.desc": "A character that walks, jumps and falls with gravity.",
+  "error.saveFailedPrefix": "Couldn't save your project",
+  "error.openFailedPrefix": "Couldn't open the project",
+  "error.newProjectFailedPrefix": "Couldn't create the project",
+  "error.stopFailedPrefix": "Couldn't stop the game",
+  "error.invalidProjectName": "That name can't be used on Windows. Avoid the characters < > : \" / \\ | ? * and starting or ending with a space or a period.",
+  "prompt.confirmCloseUnsaved": "You have unsaved changes in your project. Quit anyway?",
+  "update.installFailed": "Couldn't install the update. Check your connection and try again later."
 }

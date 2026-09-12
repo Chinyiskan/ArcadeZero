@@ -6,6 +6,7 @@
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
 use tokio::process::Command;
 
 use crate::run::{python_exe, vendored_dir};
@@ -17,19 +18,19 @@ pub struct CheckIssue {
     pub message: String,
 }
 
-fn check_script() -> PathBuf {
-    vendored_dir().join("_check_pyflakes.py")
+fn check_script(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(vendored_dir(app)?.join("_check_pyflakes.py"))
 }
 
 #[tauri::command]
-pub async fn check_syntax(path: String) -> Result<Vec<CheckIssue>, String> {
-    let python = python_exe();
+pub async fn check_syntax(app: AppHandle, path: String) -> Result<Vec<CheckIssue>, String> {
+    let python = python_exe(&app)?;
     if !python.is_file() {
         return Err("No se encontro el Python embebido.".into());
     }
 
     let out = Command::new(&python)
-        .arg(check_script())
+        .arg(check_script(&app)?)
         .arg(&path)
         .output()
         .await
