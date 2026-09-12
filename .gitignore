@@ -24,6 +24,12 @@ runtime/.cache/
 __pycache__/
 *.pyc
 
+# --- Secrets (por si alguna vez alguien los deja dentro del repo por error;
+# la clave del updater vive fuera del repo a proposito, ver PLAN.md §11) ---
+*.key
+*.pem
+secrets/
+
 # --- Editor / OS ---
 .vscode/*
 !.vscode/extensions.json
