@@ -34,3 +34,8 @@ secrets/
 .vscode/*
 !.vscode/extensions.json
 Thumbs.db
+
+# --- Notas internas de desarrollo (no son parte del producto ni utiles
+# para quien clona el repo para usarlo o contribuir) ---
+/.claude/
+/PLAN.md
