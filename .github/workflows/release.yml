@@ -45,5 +45,15 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "ArcadeZero ${{ github.ref_name }}"
+          releaseBody: |
+            Instalador de ArcadeZero para Windows.
+
+            Para instalar: bajen `ArcadeZero_*_x64-setup.exe` de los archivos
+            de abajo y corranlo. Windows puede mostrar una advertencia de
+            SmartScreen (el instalador todavia no esta firmado digitalmente)
+            — click en "Más información" → "Ejecutar de todas formas".
+
+            Editen esta descripción antes de publicar si esta versión trae
+            cambios puntuales que valga la pena destacar.
           releaseDraft: true
           prerelease: false
