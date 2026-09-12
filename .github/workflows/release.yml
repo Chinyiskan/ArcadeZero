@@ -80,13 +80,18 @@ jobs:
 
           Start-Process -FilePath $installer.FullName -ArgumentList "/S", "/D=$installDir" -Wait
 
-          $pythonExe = Join-Path $installDir "resources\runtime\python\python.exe"
-          $launcher = Join-Path $installDir "resources\runtime\launcher.py"
-          $template = Join-Path $installDir "resources\templates\en-blanco\main.py"
+          # En Windows, `resource_dir()` de Tauri resuelve al mismo directorio
+          # del ejecutable (no a un subdirectorio "resources\", a diferencia
+          # de otros frameworks) — bundle.resources copia ahi directo.
+          $pythonExe = Join-Path $installDir "runtime\python\python.exe"
+          $launcher = Join-Path $installDir "runtime\launcher.py"
+          $template = Join-Path $installDir "templates\en-blanco\main.py"
 
           $missing = @($pythonExe, $launcher, $template) | Where-Object { -not (Test-Path $_) }
           if ($missing) {
             $missing | ForEach-Object { Write-Host "FALTA: $_" }
+            Write-Host "Contenido real de $installDir (2 niveles):"
+            Get-ChildItem -Path $installDir -Recurse -Depth 1 | ForEach-Object { Write-Host " - $($_.FullName)" }
             throw "El instalador no trae el runtime/plantillas esperados. Revisa bundle.resources en tauri.conf.json."
           }
           Write-Host "OK: runtime y plantillas presentes en el instalador."
