@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Instalar dependencias JS
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check + lint de Svelte
+        run: pnpm run check
+
+      - name: Tests JS
+        run: pnpm test
+
+      - name: Tests Rust
+        run: cargo test
+        working-directory: src-tauri

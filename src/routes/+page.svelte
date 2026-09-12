@@ -3,6 +3,8 @@
   import { invoke } from "@tauri-apps/api/core";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { open as openDialog } from "@tauri-apps/plugin-dialog";
+  import { check as checkUpdate, type Update } from "@tauri-apps/plugin-updater";
+  import { relaunch } from "@tauri-apps/plugin-process";
   import CodeEditor, { type CheckIssue } from "$lib/editor/CodeEditor.svelte";
   import Toolbar from "$lib/Toolbar.svelte";
   import StatusBar from "$lib/StatusBar.svelte";
@@ -53,6 +55,8 @@
   let editor: CodeEditor | undefined = $state();
   let tabs = $state<Tab[]>(initialTabs());
   let activeTabId = $state("main");
+  let pendingUpdate = $state<Update | null>(null);
+  let updateInstalling = $state(false);
 
   const dirty = $derived(code !== savedCode);
   const activeTab = $derived(tabs.find((tab) => tab.id === activeTabId) ?? tabs[0]);
@@ -200,6 +204,26 @@
     await invoke("stop_run");
   }
 
+  async function checkForUpdate() {
+    try {
+      pendingUpdate = await checkUpdate();
+    } catch (e) {
+      console.error("check_update fallo", e);
+    }
+  }
+
+  async function installUpdate() {
+    if (!pendingUpdate) return;
+    updateInstalling = true;
+    try {
+      await pendingUpdate.downloadAndInstall();
+      await relaunch();
+    } catch (e) {
+      console.error("install_update fallo", e);
+      updateInstalling = false;
+    }
+  }
+
   async function handleCheck() {
     if (!projectPath) return;
     if (dirty) await handleSave();
@@ -269,6 +293,7 @@
   onMount(() => {
     loadSettings();
     refreshRuntimeStatus();
+    checkForUpdate();
 
     const unlisten: UnlistenFn[] = [];
     listen("run_start", () => {
@@ -333,6 +358,15 @@
       templatePickerOpen = true;
     }}
   />
+
+  {#if pendingUpdate}
+    <div class="banner update-banner">
+      <span>{t("update.available")} (v{pendingUpdate.version})</span>
+      <button onclick={installUpdate} disabled={updateInstalling}>
+        {updateInstalling ? t("update.installing") : t("update.install")}
+      </button>
+    </div>
+  {/if}
 
   {#if !projectPath}
     <div class="onboarding">
@@ -408,6 +442,28 @@
     background: var(--az-color-editor-active-line);
     color: var(--az-color-text-muted);
     font-size: 0.85rem;
+  }
+  .update-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--az-space-2);
+    background: var(--az-color-accent);
+    color: var(--az-color-accent-contrast);
+  }
+  .update-banner button {
+    padding: var(--az-space-1) var(--az-space-2);
+    border-radius: var(--az-radius);
+    border: 1px solid var(--az-color-accent-contrast);
+    background: none;
+    color: var(--az-color-accent-contrast);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.8rem;
+  }
+  .update-banner button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
   .onboarding {
     flex: 1;
