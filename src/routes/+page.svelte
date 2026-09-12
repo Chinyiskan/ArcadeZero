@@ -3,7 +3,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { open as openDialog } from "@tauri-apps/plugin-dialog";
-  import CodeEditor from "$lib/editor/CodeEditor.svelte";
+  import CodeEditor, { type CheckIssue } from "$lib/editor/CodeEditor.svelte";
   import Toolbar from "$lib/Toolbar.svelte";
   import StatusBar from "$lib/StatusBar.svelte";
   import Console from "$lib/panels/Console.svelte";
@@ -200,6 +200,29 @@
     await invoke("stop_run");
   }
 
+  async function handleCheck() {
+    if (!projectPath) return;
+    if (dirty) await handleSave();
+    try {
+      const issues = await invoke<CheckIssue[]>("check_syntax", {
+        path: `${projectPath}\\main.py`,
+      });
+      editor?.showCheckIssues(issues);
+      consoleExpanded = true;
+      if (issues.length === 0) {
+        consoleLines = [...consoleLines, { kind: "out", text: t("check.clean") }];
+      } else {
+        consoleLines = [
+          ...consoleLines,
+          ...issues.map((i) => ({ kind: "out" as const, text: `main.py:${i.line}:${i.col}: ${i.message}` })),
+        ];
+      }
+    } catch (e) {
+      consoleLines = [...consoleLines, { kind: "err", text: String(e) }];
+      consoleExpanded = true;
+    }
+  }
+
   function handleGoToLine(line: number) {
     editor?.goToLine(line);
   }
@@ -289,6 +312,7 @@
     onstop={handleStop}
     onzoomin={handleZoomIn}
     onzoomout={handleZoomOut}
+    oncheck={handleCheck}
     ontheme={handleTheme}
     ondyslexicfont={handleDyslexicFont}
     onuiscale={handleUiScale}

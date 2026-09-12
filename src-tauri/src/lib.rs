@@ -1,4 +1,5 @@
 mod assets;
+mod check;
 mod error_parse;
 mod project;
 mod run;
@@ -33,6 +34,7 @@ pub fn run() {
             run::run_project,
             run::stop_run,
             run::runtime_status,
+            check::check_syntax,
             assets::list_assets,
             assets::import_asset,
             assets::delete_asset,

@@ -4,6 +4,7 @@
   // desde Nuevo (toolbar/onboarding) como desde Ayuda ("Ver plantillas").
   import { t } from "$lib/i18n";
   import { TEMPLATE_IDS, RECOMMENDED_TEMPLATE, type TemplateId } from "$lib/templates";
+  import { focusTrap } from "$lib/actions/focusTrap";
 
   let {
     open = false,
@@ -24,7 +25,14 @@
       if (e.target === e.currentTarget) onclose?.();
     }}
   >
-    <div class="modal" role="dialog" aria-modal="true" aria-label={t("templates.pickTitle")}>
+    <div
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("templates.pickTitle")}
+      tabindex="-1"
+      use:focusTrap
+    >
       <h2>{t("templates.pickTitle")}</h2>
       <p class="body">{t("templates.pickBody")}</p>
       <div class="cards">

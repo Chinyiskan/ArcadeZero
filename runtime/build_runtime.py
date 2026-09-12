@@ -134,6 +134,40 @@ def trim_runtime(python_dir: Path) -> None:
     print(f"[build_runtime] trim: liberados ~{removed_bytes / 1_000_000:.1f} MB")
 
 
+# Submodulos de numpy que pgzero no toca (confirmado: tone.py/ptext.py solo
+# usan numpy.clip/arange/arrays basicos). Son lazy-loaded via __getattr__ en
+# numpy/__init__.py, asi que borrarlos no rompe `import numpy`. El resto del
+# peso de numpy (numpy.libs + numpy/_core, ~30 MB de BLAS/extensiones
+# compiladas) es la libreria matematica real: no se recorta aqui, ver nota en
+# PLAN.md §10 (deuda tecnica).
+NUMPY_DEAD_WEIGHT_DIRS = ["f2py", "polynomial"]
+
+
+def trim_numpy(site_packages: Path) -> None:
+    numpy_dir = site_packages / "numpy"
+    if not numpy_dir.exists():
+        return
+    removed_bytes = 0
+
+    for name in NUMPY_DEAD_WEIGHT_DIRS:
+        path = numpy_dir / name
+        if path.exists():
+            removed_bytes += sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+            shutil.rmtree(path, ignore_errors=True)
+
+    # Directorios de tests (no se ejecutan en runtime) y stubs .pyi (solo
+    # para type-checkers como mypy, no se leen al importar).
+    for tests_dir in numpy_dir.rglob("tests"):
+        if tests_dir.is_dir():
+            removed_bytes += sum(f.stat().st_size for f in tests_dir.rglob("*") if f.is_file())
+            shutil.rmtree(tests_dir, ignore_errors=True)
+    for pyi_file in numpy_dir.rglob("*.pyi"):
+        removed_bytes += pyi_file.stat().st_size
+        pyi_file.unlink(missing_ok=True)
+
+    print(f"[build_runtime] trim numpy: liberados ~{removed_bytes / 1_000_000:.1f} MB")
+
+
 def copy_vendored_and_launcher(dist_dir: Path) -> None:
     vendored_src = RUNTIME_DIR / "vendored"
     vendored_dst = dist_dir / "vendored"
@@ -200,6 +234,7 @@ def main() -> None:
         python_exe = python_dir / "python.exe"
         pip_install(python_exe, [f"pygame-ce=={PYGAME_CE_VERSION}", *PGZERO_EXTRA_DEPS])
         trim_runtime(python_dir)
+        trim_numpy(python_dir / "Lib" / "site-packages")
 
     copy_vendored_and_launcher(dist_dir)
 

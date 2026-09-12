@@ -24,11 +24,13 @@
     completionKeymap,
   } from "@codemirror/autocomplete";
   import { searchKeymap } from "@codemirror/search";
-  import { lintKeymap } from "@codemirror/lint";
+  import { linter, forceLinting, lintKeymap, type Diagnostic } from "@codemirror/lint";
   import { arcadeZeroCompletions } from "./completions";
   import { indentGuides } from "./indentGuides";
   import { indentConsistencyLinter } from "./indentLint";
   import { editorTheme, fontSizeTheme, syntaxColors } from "./theme";
+
+  export type CheckIssue = { line: number; col: number; message: string };
 
   let {
     value = $bindable(""),
@@ -44,6 +46,28 @@
   let view: EditorView | undefined;
   const fontSizeCompartment = new Compartment();
   let lastKnownValue = value;
+
+  // Resultados del boton "Revisar" (PLAN.md §8, pyflakes on-demand). No
+  // corre en cada tecla: `showCheckIssues` los guarda aca y fuerza al
+  // linter de CodeMirror a releerlos con `forceLinting`.
+  let checkIssues: CheckIssue[] = [];
+  const pyflakesLinter = () =>
+    linter((v: EditorView) => {
+      const diagnostics: Diagnostic[] = [];
+      for (const issue of checkIssues) {
+        if (issue.line < 1 || issue.line > v.state.doc.lines) continue;
+        const line = v.state.doc.line(issue.line);
+        const from = Math.min(line.from + Math.max(issue.col - 1, 0), line.to);
+        diagnostics.push({ from, to: line.to, severity: "warning", message: issue.message });
+      }
+      return diagnostics;
+    });
+
+  /** Llamado desde +page.svelte con el resultado de `check_syntax`. */
+  export function showCheckIssues(issues: CheckIssue[]) {
+    checkIssues = issues;
+    if (view) forceLinting(view);
+  }
 
   export function focus() {
     view?.focus();
@@ -88,6 +112,7 @@
         autocompletion({ activateOnTyping: true }),
         indentGuides(),
         indentConsistencyLinter(),
+        pyflakesLinter(),
         fontSizeCompartment.of(fontSizeTheme(fontSize)),
         editorTheme,
         keymap.of([
@@ -105,6 +130,10 @@
             lastKnownValue = text;
             value = text;
             onchange?.(text);
+            // Lineas del ultimo "Revisar" ya no corresponden al codigo
+            // editado; el linter las vuelve a leer solo (@codemirror/lint
+            // re-corre en cada doc change), asi que basta con vaciarlas.
+            checkIssues = [];
           }
         }),
       ],

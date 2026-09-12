@@ -6,6 +6,7 @@
   import { renderMarkdown } from "$lib/markdown";
   import cheatsheet from "../../../docs/pgzero-cheatsheet.md?raw";
   import XIcon from "phosphor-svelte/lib/XIcon";
+  import { focusTrap } from "$lib/actions/focusTrap";
 
   let {
     open = false,
@@ -28,7 +29,14 @@
       if (e.target === e.currentTarget) onclose?.();
     }}
   >
-    <div class="modal" role="dialog" aria-modal="true" aria-label={t("help.title")}>
+    <div
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("help.title")}
+      tabindex="-1"
+      use:focusTrap
+    >
       <div class="header">
         <h2>{t("help.title")}</h2>
         <div class="actions">

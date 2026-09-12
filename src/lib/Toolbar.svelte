@@ -9,6 +9,7 @@
   import StopIcon from "phosphor-svelte/lib/StopIcon";
   import MagnifyingGlassPlusIcon from "phosphor-svelte/lib/MagnifyingGlassPlusIcon";
   import MagnifyingGlassMinusIcon from "phosphor-svelte/lib/MagnifyingGlassMinusIcon";
+  import CheckCircleIcon from "phosphor-svelte/lib/CheckCircleIcon";
   import PaletteIcon from "phosphor-svelte/lib/PaletteIcon";
   import GearSixIcon from "phosphor-svelte/lib/GearSixIcon";
   import QuestionIcon from "phosphor-svelte/lib/QuestionIcon";
@@ -33,6 +34,7 @@
     onstop,
     onzoomin,
     onzoomout,
+    oncheck,
     ontheme,
     ondyslexicfont,
     onuiscale,
@@ -51,6 +53,7 @@
     onstop?: () => void;
     onzoomin?: () => void;
     onzoomout?: () => void;
+    oncheck?: () => void;
     ontheme?: () => void;
     ondyslexicfont?: (value: boolean) => void;
     onuiscale?: (value: string) => void;
@@ -106,6 +109,11 @@
   <button class="tbtn" onclick={onzoomin} title={`${t("toolbar.zoomIn")} (Ctrl +)`}>
     <MagnifyingGlassPlusIcon size={ICON_SIZE} aria-hidden="true" />
     <span>{t("toolbar.zoomIn")}</span>
+  </button>
+
+  <button class="tbtn" onclick={oncheck} title={t("toolbar.check")}>
+    <CheckCircleIcon size={ICON_SIZE} aria-hidden="true" />
+    <span>{t("toolbar.check")}</span>
   </button>
 
   <div class="sep" role="separator"></div>

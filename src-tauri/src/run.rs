@@ -43,7 +43,7 @@ fn runtime_dir() -> PathBuf {
         .join("windows-x64")
 }
 
-fn python_exe() -> PathBuf {
+pub(crate) fn python_exe() -> PathBuf {
     runtime_dir().join("python").join("python.exe")
 }
 
@@ -51,7 +51,7 @@ fn launcher_py() -> PathBuf {
     runtime_dir().join("launcher.py")
 }
 
-fn vendored_dir() -> PathBuf {
+pub(crate) fn vendored_dir() -> PathBuf {
     runtime_dir().join("vendored")
 }
 

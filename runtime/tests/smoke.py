@@ -85,6 +85,33 @@ def check_crash_excepthook() -> None:
     print(f"[smoke] excepthook OK: {payload['type']} en linea {payload['lineno']}")
 
 
+def check_pyflakes() -> None:
+    """Botón "Revisar" (PLAN.md §8): pyflakes vendorizado no debe marcar
+    los globals magicos de pgzero (screen/keyboard/...) como undefined, y sí
+    debe pescar un import sin usar de verdad."""
+    check_script = VENDORED_DIR / "_check_pyflakes.py"
+    bad_sketch = FIXTURE_SKETCH.parent / "_pyflakes_fixture.py"
+    bad_sketch.write_text(
+        "import os\n\n\ndef draw():\n    screen.clear()\n    keyboard.up\n",
+        encoding="utf-8",
+    )
+    try:
+        result = subprocess.run(
+            [sys.executable, str(check_script), str(bad_sketch)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, result.stderr
+        issues = json.loads(result.stdout)
+        messages = [i["message"] for i in issues]
+        assert any("'os' imported but unused" in m for m in messages), issues
+        assert not any("screen" in m or "keyboard" in m for m in messages), issues
+        print(f"[smoke] pyflakes OK: {issues}")
+    finally:
+        bad_sketch.unlink(missing_ok=True)
+
+
 def main() -> int:
     if not FIXTURE_SKETCH.exists():
         print(f"[smoke] falta el fixture: {FIXTURE_SKETCH}", file=sys.stderr)
@@ -93,6 +120,7 @@ def main() -> int:
     check_imports()
     check_clean_run()
     check_crash_excepthook()
+    check_pyflakes()
 
     print("[smoke] TODO OK")
     return 0
