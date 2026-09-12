@@ -2,9 +2,14 @@
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-  import { open as openDialog } from "@tauri-apps/plugin-dialog";
+  import {
+    open as openDialog,
+    confirm as confirmDialog,
+    message as messageDialog,
+  } from "@tauri-apps/plugin-dialog";
   import { check as checkUpdate, type Update } from "@tauri-apps/plugin-updater";
   import { relaunch } from "@tauri-apps/plugin-process";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
   import CodeEditor, { type CheckIssue } from "$lib/editor/CodeEditor.svelte";
   import Toolbar from "$lib/Toolbar.svelte";
   import StatusBar from "$lib/StatusBar.svelte";
@@ -57,6 +62,8 @@
   let activeTabId = $state("main");
   let pendingUpdate = $state<Update | null>(null);
   let updateInstalling = $state(false);
+  let updateError = $state<string | null>(null);
+  let launching = $state(false);
 
   const dirty = $derived(code !== savedCode);
   const activeTab = $derived(tabs.find((tab) => tab.id === activeTabId) ?? tabs[0]);
@@ -142,14 +149,29 @@
     }
   }
 
-  async function openAt(path: string) {
-    const folder = await invoke<string>("open_project", { path });
-    const content = await invoke<string>("read_file", { path: `${folder}\\main.py` });
-    projectPath = folder;
-    code = content;
-    savedCode = content;
-    tabs = initialTabs();
-    activeTabId = "main";
+  /** true si `name` sirve como nombre de carpeta en Windows. */
+  function isValidProjectName(name: string): boolean {
+    const trimmed = name.trim();
+    if (!trimmed || /[<>:"/\\|?*]/.test(trimmed)) return false;
+    if (/[ .]$/.test(trimmed)) return false;
+    const reserved = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+    return !reserved.test(trimmed);
+  }
+
+  async function openAt(path: string): Promise<boolean> {
+    try {
+      const folder = await invoke<string>("open_project", { path });
+      const content = await invoke<string>("read_file", { path: `${folder}\\main.py` });
+      projectPath = folder;
+      code = content;
+      savedCode = content;
+      tabs = initialTabs();
+      activeTabId = "main";
+      return true;
+    } catch (e) {
+      await messageDialog(`${t("error.openFailedPrefix")}: ${e}`, { kind: "error" });
+      return false;
+    }
   }
 
   // ponytail: selector de carpeta con dialogo nativo (tauri-plugin-dialog);
@@ -174,9 +196,17 @@
     if (!parent) return;
     const name = window.prompt(t("prompt.newProjectName"), "mi-juego");
     if (!name) return;
+    if (!isValidProjectName(name)) {
+      await messageDialog(t("error.invalidProjectName"), { kind: "error" });
+      return;
+    }
     const dest = `${parent}\\${name}`;
-    const folder = await invoke<string>("new_project", { template: templateId, dest });
-    await openAt(folder);
+    try {
+      const folder = await invoke<string>("new_project", { template: templateId, dest });
+      await openAt(folder);
+    } catch (e) {
+      await messageDialog(`${t("error.newProjectFailedPrefix")}: ${e}`, { kind: "error" });
+    }
   }
 
   async function handleOpen() {
@@ -185,23 +215,56 @@
     await openAt(dest);
   }
 
-  async function handleSave() {
-    if (!projectPath) return;
-    await invoke("save_file", { path: `${projectPath}\\main.py`, content: code });
-    savedCode = code;
+  /** Devuelve true si guardo con exito (o no habia nada que guardar). */
+  async function handleSave(): Promise<boolean> {
+    if (!projectPath) return true;
+    try {
+      await invoke("save_file", { path: `${projectPath}\\main.py`, content: code });
+      savedCode = code;
+      return true;
+    } catch (e) {
+      consoleLines = [
+        ...consoleLines,
+        { kind: "err", text: `${t("error.saveFailedPrefix")}: ${e}` },
+      ];
+      consoleExpanded = true;
+      return false;
+    }
   }
 
   async function handlePlay() {
-    if (!projectPath) return;
-    if (dirty) await handleSave();
+    if (!projectPath || running || launching) return;
+    if (dirty && !(await handleSave())) return;
     consoleLines = [];
     consoleExpanded = true;
     runError = null;
-    await invoke("run_project", { path: projectPath });
+    launching = true;
+    try {
+      await invoke("run_project", { path: projectPath });
+    } catch (e) {
+      consoleLines = [...consoleLines, { kind: "err", text: String(e) }];
+      consoleExpanded = true;
+    } finally {
+      launching = false;
+    }
   }
 
   async function handleStop() {
-    await invoke("stop_run");
+    if (!running) return;
+    try {
+      await invoke("stop_run");
+    } catch (e) {
+      consoleLines = [
+        ...consoleLines,
+        { kind: "err", text: `${t("error.stopFailedPrefix")}: ${e}` },
+      ];
+      consoleExpanded = true;
+    } finally {
+      // El backend puede haber quedado en un estado que nunca emite
+      // `run_exit` (proceso zombie); sin este fallback el boton de Detener
+      // quedaria inutil para siempre.
+      running = false;
+    }
   }
 
   async function checkForUpdate() {
@@ -215,18 +278,20 @@
   async function installUpdate() {
     if (!pendingUpdate) return;
     updateInstalling = true;
+    updateError = null;
     try {
       await pendingUpdate.downloadAndInstall();
       await relaunch();
     } catch (e) {
       console.error("install_update fallo", e);
+      updateError = t("update.installFailed");
       updateInstalling = false;
     }
   }
 
   async function handleCheck() {
     if (!projectPath) return;
-    if (dirty) await handleSave();
+    if (dirty && !(await handleSave())) return;
     try {
       const issues = await invoke<CheckIssue[]>("check_syntax", {
         path: `${projectPath}\\main.py`,
@@ -315,6 +380,17 @@
       running = false;
     }).then((u) => unlisten.push(u));
 
+    getCurrentWindow()
+      .onCloseRequested(async (event) => {
+        if (!dirty) return;
+        const shouldClose = await confirmDialog(t("prompt.confirmCloseUnsaved"), {
+          title: "ArcadeZero",
+          kind: "warning",
+        });
+        if (!shouldClose) event.preventDefault();
+      })
+      .then((u) => unlisten.push(u));
+
     window.addEventListener("keydown", handleKeydown);
     return () => {
       unlisten.forEach((u) => u());
@@ -361,7 +437,7 @@
 
   {#if pendingUpdate}
     <div class="banner update-banner">
-      <span>{t("update.available")} (v{pendingUpdate.version})</span>
+      <span>{updateError ?? `${t("update.available")} (v${pendingUpdate.version})`}</span>
       <button onclick={installUpdate} disabled={updateInstalling}>
         {updateInstalling ? t("update.installing") : t("update.install")}
       </button>

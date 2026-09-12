@@ -71,5 +71,12 @@
   "templates.mi-primer-sprite.name": "Mi primer sprite",
   "templates.mi-primer-sprite.desc": "Un alien que se mueve con las flechas del teclado.",
   "templates.plataformas-basico.name": "Plataformas básico",
-  "templates.plataformas-basico.desc": "Un personaje que camina, salta y cae con gravedad."
+  "templates.plataformas-basico.desc": "Un personaje que camina, salta y cae con gravedad.",
+  "error.saveFailedPrefix": "No se pudo guardar tu proyecto",
+  "error.openFailedPrefix": "No se pudo abrir el proyecto",
+  "error.newProjectFailedPrefix": "No se pudo crear el proyecto",
+  "error.stopFailedPrefix": "No se pudo detener el juego",
+  "error.invalidProjectName": "Ese nombre no se puede usar en Windows. Evita los caracteres < > : \" / \\ | ? * y que empiece o termine con un espacio o un punto.",
+  "prompt.confirmCloseUnsaved": "Tienes cambios sin guardar en tu proyecto. ¿Salir de todas formas?",
+  "update.installFailed": "No se pudo instalar la actualización. Revisa tu conexión e intenta de nuevo mas tarde."
 }

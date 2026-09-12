@@ -43,6 +43,7 @@
   let pending = $state<PendingDelete>(null);
 
   async function refresh() {
+    error = null;
     for (const kind of ASSET_KINDS) {
       try {
         const names = await invoke<string[]>("list_assets", { projectPath, kind });

@@ -57,3 +57,38 @@ jobs:
             cambios puntuales que valga la pena destacar.
           releaseDraft: true
           prerelease: false
+
+      # Guardarraíl contra el bug que motivo esta seccion: el runtime Python
+      # (y las plantillas) se empaquetan via `bundle.resources` en
+      # tauri.conf.json, pero un glob mal escrito ahi rompe el instalador en
+      # silencio — compila y firma bien, y el usuario recien lo descubre al
+      # apretar "Jugar". Instala el NSIS generado en modo silencioso en el
+      # propio runner y verifica que los recursos realmente esten adentro
+      # antes de dejar pasar el release.
+      - name: Verificar que el instalador trae el runtime embebido
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*-setup.exe" -Recurse |
+            Select-Object -First 1
+          if (-not $installer) {
+            throw "No se encontro el instalador NSIS en src-tauri/target/release/bundle/nsis"
+          }
+          Write-Host "Instalador: $($installer.FullName)"
+
+          $installDir = Join-Path $env:RUNNER_TEMP "arcadezero-smoketest"
+          if (Test-Path $installDir) { Remove-Item $installDir -Recurse -Force }
+
+          Start-Process -FilePath $installer.FullName -ArgumentList "/S", "/D=$installDir" -Wait
+
+          $pythonExe = Join-Path $installDir "resources\runtime\python\python.exe"
+          $launcher = Join-Path $installDir "resources\runtime\launcher.py"
+          $template = Join-Path $installDir "resources\templates\en-blanco\main.py"
+
+          $missing = @($pythonExe, $launcher, $template) | Where-Object { -not (Test-Path $_) }
+          if ($missing) {
+            $missing | ForEach-Object { Write-Host "FALTA: $_" }
+            throw "El instalador no trae el runtime/plantillas esperados. Revisa bundle.resources en tauri.conf.json."
+          }
+          Write-Host "OK: runtime y plantillas presentes en el instalador."
+
+          & (Join-Path $installDir "uninstall.exe") /S | Out-Null

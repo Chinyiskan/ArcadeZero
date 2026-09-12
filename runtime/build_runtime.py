@@ -18,11 +18,18 @@ Uso:
 Ladder: python-build-standalone + `pip install` directo al arbol del
 runtime resuelve el 90% del problema. No hay empaquetador de wheels
 propio aqui a proposito.
+
+Integridad del interprete descargado: la primera vez que se corre este
+script para un asset nuevo (nuevo PBS_TAG), el sha256 de la descarga se
+registra en `runtime/pbs_sha256.json` y hay que commitear ese archivo. De ahi
+en mas, cualquier corrida (CI incluido) que descargue un archivo con otro
+hash aborta en vez de empaquetar un runtime sin verificar.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import platform
 import shutil
 import subprocess
@@ -33,6 +40,15 @@ from pathlib import Path
 
 RUNTIME_DIR = Path(__file__).resolve().parent
 REPO_ROOT = RUNTIME_DIR.parent
+
+# Hashes conocidos de los assets de python-build-standalone que ya bajamos
+# alguna vez (commiteado, a diferencia de runtime/dist y runtime/.cache — ver
+# .gitignore). Primera vez que se agrega un asset nuevo: no hay nada que
+# comparar, se registra el hash de esa descarga como "de confianza" (TOFU) y
+# se commitea; de ahi en mas cualquier descarga (CI incluido) que no calce
+# con lo commiteado aborta el build en vez de empaquetar un runtime corrupto
+# o alterado en silencio.
+PBS_SHA256_FILE = RUNTIME_DIR / "pbs_sha256.json"
 
 # Pinned python-build-standalone release. Bump deliberadamente, no auto-latest,
 # para que el build sea reproducible. Ver:
@@ -58,14 +74,44 @@ def current_platform_key() -> tuple[str, str]:
     return (platform.system(), platform.machine())
 
 
-def download(url: str, dest: Path) -> None:
+def load_known_hashes() -> dict[str, str]:
+    if not PBS_SHA256_FILE.is_file():
+        return {}
+    return json.loads(PBS_SHA256_FILE.read_text(encoding="utf-8"))
+
+
+def verify_or_pin_hash(asset_name: str, actual_sha256: str) -> None:
+    known = load_known_hashes()
+    expected = known.get(asset_name)
+    if expected is None:
+        known[asset_name] = actual_sha256
+        PBS_SHA256_FILE.write_text(
+            json.dumps(known, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        print(
+            f"[build_runtime] primer uso de {asset_name}: hash sha256 registrado en "
+            f"{PBS_SHA256_FILE.name} (revisa y commitea este archivo)."
+        )
+        return
+    if expected != actual_sha256:
+        raise SystemExit(
+            f"El sha256 de {asset_name} no coincide con el registrado en "
+            f"{PBS_SHA256_FILE.name}: esperado {expected}, descargado {actual_sha256}. "
+            "La descarga puede estar corrupta o el asset fue alterado; no se arma el "
+            "runtime con un interprete sin verificar."
+        )
+
+
+def download(url: str, dest: Path, asset_name: str) -> None:
     if dest.exists():
         print(f"[build_runtime] ya descargado: {dest.name}")
+        verify_or_pin_hash(asset_name, sha256_of(dest))
         return
     print(f"[build_runtime] descargando {url}")
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(dest.suffix + ".part")
     urllib.request.urlretrieve(url, tmp)
+    verify_or_pin_hash(asset_name, sha256_of(tmp))
     tmp.rename(dest)
 
 
@@ -212,7 +258,7 @@ def main() -> None:
 
     cache_dir = RUNTIME_DIR / ".cache"
     archive_path = cache_dir / asset_name
-    download(python_build_standalone_url(asset_name), archive_path)
+    download(python_build_standalone_url(asset_name), archive_path, asset_name)
 
     dist_dir = args.out / platform_dir_name
     python_dir = dist_dir / "python"

@@ -6,7 +6,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 use crate::assets::{self, AssetWatcherState};
 
@@ -29,15 +29,27 @@ def update():
 
 /// Carpeta `templates/` del repo (armada por `pgzero-domain`, Fase 2).
 ///
+/// Mismo problema que `runtime_dir()` en `run.rs`: en dev vive junto al
+/// codigo fuente, pero en un build instalado esa ruta de compilacion no
+/// existe en la maquina del usuario. Se empaqueta como resource de Tauri
+/// (ver `tauri.conf.json` `bundle.resources`) y hay que preguntarle al
+/// `AppHandle` donde quedo en tiempo de ejecucion.
+///
 /// Override para tests/dev: env var `ARCADEZERO_TEMPLATES_DIR` (mismo patrón
 /// que `ARCADEZERO_RUNTIME_DIR` en `run.rs`).
-fn templates_dir() -> PathBuf {
+fn templates_dir(app: &AppHandle) -> PathBuf {
     if let Ok(dir) = std::env::var("ARCADEZERO_TEMPLATES_DIR") {
         return PathBuf::from(dir);
     }
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("templates")
+    if cfg!(debug_assertions) {
+        return PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("templates");
+    }
+    app.path()
+        .resource_dir()
+        .map(|dir| dir.join("templates"))
+        .unwrap_or_else(|_| PathBuf::from("templates"))
 }
 
 /// Copia un directorio recursivamente (no hay `fs::copy_dir` en std).
@@ -61,8 +73,8 @@ fn copy_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
 ///
 /// Si la plantilla no existe en disco, cae al `BLANK_TEMPLATE` embebido
 /// (nunca deja al usuario sin `main.py`).
-pub fn create_sketch(template: &str, dest: &Path) -> io::Result<PathBuf> {
-    let template_src = templates_dir().join(template);
+pub fn create_sketch(template: &str, dest: &Path, templates_root: &Path) -> io::Result<PathBuf> {
+    let template_src = templates_root.join(template);
     if template_src.is_dir() {
         copy_dir_recursive(&template_src, dest)?;
     }
@@ -109,7 +121,9 @@ pub fn new_project(
     template: String,
     dest: String,
 ) -> Result<String, String> {
-    let created = create_sketch(&template, Path::new(&dest)).map_err(|e| e.to_string())?;
+    let templates_root = templates_dir(&app);
+    let created = create_sketch(&template, Path::new(&dest), &templates_root)
+        .map_err(|e| e.to_string())?;
     assets::watch_sketch(app, &watcher, &created)?;
     Ok(created.display().to_string())
 }
@@ -155,10 +169,17 @@ mod tests {
         dir
     }
 
+    fn dev_templates_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("templates")
+    }
+
     #[test]
     fn new_project_creates_expected_structure() {
         let dest = temp_dir("new_project");
-        let created = create_sketch("en-blanco", &dest).expect("crear sketch");
+        let created =
+            create_sketch("en-blanco", &dest, &dev_templates_dir()).expect("crear sketch");
 
         assert_eq!(created, dest);
         assert!(dest.join("main.py").is_file());
@@ -183,7 +204,7 @@ mod tests {
     #[test]
     fn read_file_returns_written_content() {
         let dest = temp_dir("read_file");
-        create_sketch("en-blanco", &dest).unwrap();
+        create_sketch("en-blanco", &dest, &dev_templates_dir()).unwrap();
         let main_py = dest.join("main.py");
 
         let content = read_file(main_py.display().to_string()).expect("leer main.py");
@@ -195,7 +216,7 @@ mod tests {
     #[test]
     fn open_project_accepts_valid_sketch() {
         let dest = temp_dir("open_project_ok");
-        create_sketch("en-blanco", &dest).unwrap();
+        create_sketch("en-blanco", &dest, &dev_templates_dir()).unwrap();
 
         let result = validate_sketch(&dest).expect("sketch valido");
         assert_eq!(result, dest);
