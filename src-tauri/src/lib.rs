@@ -53,6 +53,21 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(run::RunState::default())
         .manage(assets::AssetWatcherState::default())
+        .on_window_event(|window, event| {
+            // Red de seguridad: si la ventana se destruye sin que el
+            // frontend haya alcanzado a pedir stop_run (cierre forzado,
+            // crash de la UI), igual matamos el proceso del juego para no
+            // dejarlo huerfano corriendo en segundo plano.
+            if let tauri::WindowEvent::Destroyed = event {
+                if let Some(state) = window.try_state::<run::RunState>() {
+                    if let Ok(mut guard) = state.0.try_lock() {
+                        if let Some(child) = guard.as_mut() {
+                            let _ = child.start_kill();
+                        }
+                    }
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             project::open_project,
             project::new_project,

@@ -14,6 +14,12 @@ use tokio::sync::Mutex;
 
 use crate::error_parse::parse_stderr_line;
 
+/// Flag de Windows para que el `python.exe` embebido (subsistema consola)
+/// no abra una ventana de terminal negra al spawnearlo desde una app GUI
+/// sin consola propia. Sin esto, Windows le crea una consola implícita a
+/// cada proceso hijo de subsistema consola.
+pub(crate) const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
 /// Estado compartido en Tauri: el proceso del juego en ejecucion, si hay uno.
 /// Un solo run a la vez (igual que Mu: un `main.py`, un juego corriendo).
 #[derive(Default, Clone)]
@@ -133,6 +139,7 @@ pub async fn run_project(
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .kill_on_drop(true)
+        .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .map_err(|e| format!("No se pudo lanzar el juego: {e}"))?;
 
@@ -231,7 +238,13 @@ pub async fn runtime_status(app: AppHandle) -> RuntimeStatus {
         "import sys; sys.path.insert(0, r'{}'); import pgzero; import pygame",
         vendored.display()
     );
-    match Command::new(&python).arg("-c").arg(check).output().await {
+    match Command::new(&python)
+        .arg("-c")
+        .arg(check)
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .await
+    {
         Ok(out) if out.status.success() => RuntimeStatus {
             python_found: true,
             python_path: python.display().to_string(),

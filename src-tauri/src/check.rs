@@ -32,6 +32,7 @@ pub async fn check_syntax(app: AppHandle, path: String) -> Result<Vec<CheckIssue
     let out = Command::new(&python)
         .arg(check_script(&app)?)
         .arg(&path)
+        .creation_flags(crate::run::CREATE_NO_WINDOW)
         .output()
         .await
         .map_err(|e| format!("No se pudo correr el chequeo: {e}"))?;

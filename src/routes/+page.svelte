@@ -382,12 +382,21 @@
 
     getCurrentWindow()
       .onCloseRequested(async (event) => {
-        if (!dirty) return;
-        const shouldClose = await confirmDialog(t("prompt.confirmCloseUnsaved"), {
-          title: "ArcadeZero",
-          kind: "warning",
-        });
-        if (!shouldClose) event.preventDefault();
+        if (dirty) {
+          const shouldClose = await confirmDialog(t("prompt.confirmCloseUnsaved"), {
+            title: "ArcadeZero",
+            kind: "warning",
+          });
+          if (!shouldClose) {
+            event.preventDefault();
+            return;
+          }
+        }
+        // Si el juego sigue corriendo, lo matamos antes de cerrar para no
+        // dejar el proceso/ventana del juego huerfano en segundo plano.
+        if (running) {
+          await invoke("stop_run").catch(() => {});
+        }
       })
       .then((u) => unlisten.push(u));
 
