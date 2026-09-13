@@ -1,6 +1,6 @@
 [package]
 name = "arcadezero"
-version = "0.1.2"
+version = "0.1.3"
 description = "ArcadeZero — IDE de pgzero para chicos"
 authors = ["ArcadeZero"]
 edition = "2021"
