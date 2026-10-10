@@ -99,7 +99,9 @@ def _set_opacity(actor, current_surface):
 
 
 class Actor:
-    EXPECTED_INIT_KWARGS = SYMBOLIC_POSITIONS
+    # ArcadeZero patch: accept size=(w, h) and rescale every image to it,
+    # as Kodland's pgzero does. Upstream silently ignored unknown kwargs.
+    EXPECTED_INIT_KWARGS = SYMBOLIC_POSITIONS | {"size"}
     DELEGATED_ATTRIBUTES = [
         a for a in dir(rect.ZRect) if not a.startswith("_")
     ]
@@ -108,6 +110,7 @@ class Actor:
     _anchor = _anchor_value = (0, 0)
     _angle = 0.0
     _opacity = 1.0
+    _scale_to = None
 
     def _build_transformed_surf(self):
         cache_len = len(self._surface_cache)
@@ -129,6 +132,7 @@ class Actor:
         # Initialise it at (0, 0) for size (0, 0).
         # We'll move it to the right place and resize it later
 
+        self._scale_to = kwargs.get("size")
         self.image = image
         self._init_position(pos, anchor, **kwargs)
 
@@ -326,6 +330,9 @@ class Actor:
     def image(self, image):
         self._image_name = image
         self._orig_surf = loaders.images.load(image)
+        if self._scale_to is not None:
+            self._orig_surf = pygame.transform.smoothscale(
+                self._orig_surf, self._scale_to)
         self._surface_cache.clear()  # Clear out old image's cache.
         self._update_pos()
 

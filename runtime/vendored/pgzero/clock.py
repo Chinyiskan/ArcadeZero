@@ -13,10 +13,6 @@ __all__ = [
     'Clock', 'schedule', 'schedule_interval', 'unschedule'
 ]
 
-# This type can't be weakreffed in Python 3.4
-builtin_function_or_method = type(open)
-
-
 def weak_method(method):
     """Quick weak method ref in case users aren't using Python 3.4"""
     selfref = ref(method.__self__)
@@ -32,15 +28,12 @@ def weak_method(method):
 
 
 def mkref(o):
+    # ArcadeZero patch: only bound methods stay weak. Upstream weakref'd every
+    # callback, so lambda / functools.partial were garbage collected right
+    # after scheduling and never fired (they work on Kodland).
     if isinstance(o, MethodType):
         return weak_method(o)
-    else:
-        try:
-            return ref(o)
-        except TypeError:
-            if isinstance(o, builtin_function_or_method):
-                return lambda: o
-            raise
+    return lambda: o
 
 
 @total_ordering
